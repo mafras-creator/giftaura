@@ -185,6 +185,24 @@ function stock_status(array $product): array
     return ['key' => 'in_stock', 'label' => 'In stock'];
 }
 
+/**
+ * Make a URL slug: "Red Rose Bouquet!" -> "red-rose-bouquet".
+ * Returns '' if nothing usable remains (e.g. a name written only in Sinhala);
+ * callers then ask for a slug or generate one.
+ */
+function slugify(string $text): string
+{
+    $text = mb_strtolower(trim($text));
+    if (function_exists('iconv')) {
+        $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
+        if ($converted !== false) {
+            $text = strtolower($converted);
+        }
+    }
+    $text = preg_replace('/[^a-z0-9]+/', '-', $text) ?? '';
+    return trim(substr($text, 0, 150), '-');
+}
+
 /** Coloured badge for an order status. */
 function order_status_badge(string $status): string
 {

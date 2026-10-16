@@ -1,16 +1,25 @@
 <?php
 /**
  * Administration layout: sidebar, top bar, flash messages.
- * Variables: $content, $title. Only built pages appear in the sidebar;
- * more sections are added as each phase is completed.
+ * Variables: $content, $title.
  */
 $user      = current_user();
 $storeName = setting('store_name', 'GiftAura');
 $flashes   = Flash::pull();
 
+// [file to highlight, link, label, other files that highlight the same item]
 $menu = [
-    ['admin/index.php', 'admin/', 'Dashboard'],
+    ['admin/index.php', 'admin/', 'Dashboard', []],
+    ['admin/orders.php', 'admin/orders.php', 'Orders', ['admin/order.php']],
+    ['admin/products.php', 'admin/products.php', 'Products', ['admin/product-edit.php']],
+    ['admin/categories.php', 'admin/categories.php', 'Categories', []],
+    ['admin/inventory.php', 'admin/inventory.php', 'Inventory', []],
+    ['admin/customers.php', 'admin/customers.php', 'Customers', ['admin/customer.php']],
+    ['admin/reports.php', 'admin/reports.php', 'Reports', []],
+    ['admin/activity.php', 'admin/activity.php', 'Activity log', []],
+    ['admin/settings.php', 'admin/settings.php', 'Settings', []],
 ];
+$pendingCount = (int) Database::fetchValue("SELECT COUNT(*) FROM orders WHERE status = 'pending'");
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -34,8 +43,16 @@ $menu = [
         </a>
         <nav>
             <ul class="admin-menu">
-                <?php foreach ($menu as [$file, $path, $label]): ?>
-                    <li><a class="admin-menu__link<?= nav_active($file) ?>" href="<?= e(url($path)) ?>"><?= e($label) ?></a></li>
+                <?php foreach ($menu as [$file, $path, $label, $also]): ?>
+                    <?php $active = nav_active($file) !== '' || array_filter($also, static fn($f) => nav_active($f) !== '') !== []; ?>
+                    <li>
+                        <a class="admin-menu__link<?= $active ? ' is-active' : '' ?>" href="<?= e(url($path)) ?>">
+                            <?= e($label) ?>
+                            <?php if ($file === 'admin/orders.php' && $pendingCount > 0): ?>
+                                <span class="admin-menu__count" title="Pending orders"><?= e((string) $pendingCount) ?></span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
                 <?php endforeach; ?>
             </ul>
             <ul class="admin-menu admin-menu--secondary">

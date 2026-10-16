@@ -1,9 +1,5 @@
 <?php
-/**
- * GiftAura - admin dashboard (administrators only).
- * Phase 3: catalogue, customer and stock figures from the database.
- * Phase 6 adds sales, orders and charts.
- */
+/** GiftAura - admin dashboard: live sales, orders, customers and stock figures. */
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/app/bootstrap.php';
 
@@ -14,4 +10,5 @@ View::render('admin/dashboard', [
     'user'     => $user,
     'summary'  => DashboardService::summary(),
     'lowStock' => DashboardService::lowStockProducts(),
+    'recent'   => DashboardService::recentOrders(),
 ]);

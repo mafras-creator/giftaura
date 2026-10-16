@@ -35,4 +35,43 @@
             }
         });
     });
+    // Filters that reload the page as soon as a value is chosen
+    document.querySelectorAll('select[data-auto-submit]').forEach(function (select) {
+        select.addEventListener('change', function () {
+            if (select.form) { select.form.submit(); }
+        });
+    });
+
+    // Preview an image before uploading it (the real checks happen on the server)
+    document.querySelectorAll('input[type="file"][data-image-preview]').forEach(function (input) {
+        var preview = input.parentElement.querySelector('[data-preview-target]');
+        input.addEventListener('change', function () {
+            if (!preview || !input.files || !input.files[0]) { return; }
+            var file = input.files[0];
+            if (file.size > 2 * 1024 * 1024) {
+                window.alert('This image is larger than 2 MB. Please choose a smaller image.');
+                input.value = '';
+                preview.classList.add('is-hidden');
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                preview.src = e.target.result;
+                preview.classList.remove('is-hidden');
+            };
+            reader.readAsDataURL(file);
+        });
+    });
+
+    // Prevent double submission
+    document.querySelectorAll('form[method="post"]').forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (event.defaultPrevented) { return; }
+            var button = form.querySelector('button[type="submit"]');
+            if (button) { setTimeout(function () { button.disabled = true; }, 0); }
+        });
+    });
+    window.addEventListener('pageshow', function () {
+        document.querySelectorAll('button[type="submit"]:disabled').forEach(function (b) { b.disabled = false; });
+    });
 })();

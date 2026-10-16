@@ -4,7 +4,7 @@
 |---|---|
 | Project | E-Commerce Web System for GiftAura (MIT final-year Software Development Project, South Eastern University of Sri Lanka) |
 | Document | Functional and non-functional requirements, business rules, scope |
-| Version | 1.3 — updated at end of Phase 5 |
+| Version | 1.4 — updated at end of Phase 6 |
 | Stack | HTML5, CSS3, vanilla JavaScript, PHP 8.2, MariaDB 10.4, Apache (XAMPP) |
 
 **Status key:** `Planned` → `Built` → `Tested` (with the test case ID that proved it). This table is updated at the end of every phase. Nothing is marked `Tested` unless a test was actually executed.
@@ -56,25 +56,25 @@
 
 | ID | Requirement | Phase | Status |
 |---|---|---|---|
-| FR-30 | Admin dashboard with real counts: today's and this month's sales, orders by status, number of customers, active products, low-stock and out-of-stock products, latest orders. | 6 | Planned |
-| FR-31 | Create, edit, activate/deactivate and reorder categories and subcategories; slug generated automatically and editable. | 6 | Planned |
-| FR-32 | A category that still contains products or subcategories cannot be deleted (it can be deactivated). | 6 | Planned |
-| FR-33 | List products with search, category/status/stock filters and pagination. | 6 | Planned |
-| FR-34 | Add and edit products (name, slug, SKU, category, descriptions, price, low-stock level, featured, active). | 6 | Planned |
-| FR-35 | Deactivate and reactivate products (no hard delete once a product has orders). | 6 | Planned |
-| FR-36 | Upload product images securely, choose the primary image, reorder and remove images. | 6 | Planned |
-| FR-37 | Adjust stock (restock or manual correction with a reason); every change is recorded in the inventory ledger. | 6 | Planned |
-| FR-38 | Low-stock alerts on the dashboard and a low-stock list (stock ≤ product's threshold). | 6 | Planned |
-| FR-39 | List orders with filters (status, payment status, date range, search by reference/customer) and pagination. | 6 | Planned |
-| FR-40 | View an order: customer contact, delivery address, items, totals, payment, status history. | 6 | Planned |
-| FR-41 | Change order status only along permitted transitions (section 5.1); each change is time-stamped in the status history. | 6 | Planned |
-| FR-42 | Cancel an order (with a reason) — stock is restored automatically and recorded. | 6 | Planned |
-| FR-43 | Record payment status and method: mark paid, failed or refunded; verify bank transfer references. | 6 | Planned |
-| FR-44 | View customers (name, email, phone, order count, total spent) and a customer's orders; activate/deactivate customer accounts; set a temporary password for a customer who has forgotten theirs. | 6 | Planned |
-| FR-45 | Reports for a selected date range: orders, sales, order-status totals, best-selling products, current inventory, low-stock products. | 6 | Planned |
-| FR-46 | Export each report to CSV. | 6 | Planned |
-| FR-47 | View inventory movement history (per product and overall) and the admin activity log. | 6 | Planned |
-| FR-48 | Edit store settings: contact details, delivery fee, free-delivery threshold, payment methods on/off, bank details. | 6 | Planned |
+| FR-30 | Admin dashboard with real counts: today's and this month's sales, orders by status, number of customers, active products, low-stock and out-of-stock products, latest orders. | 6 | Built |
+| FR-31 | Create, edit, activate/deactivate and reorder categories and subcategories; slug generated automatically and editable. | 6 | Built |
+| FR-32 | A category that still contains products or subcategories cannot be deleted (it can be deactivated). | 6 | Built |
+| FR-33 | List products with search, category/status/stock filters and pagination. | 6 | Built |
+| FR-34 | Add and edit products (name, slug, SKU, category, descriptions, price, low-stock level, featured, active). | 6 | Built |
+| FR-35 | Deactivate and reactivate products (no hard delete once a product has orders). | 6 | Built |
+| FR-36 | Upload product images securely, choose the primary image, reorder and remove images. | 6 | Built |
+| FR-37 | Adjust stock (restock or manual correction with a reason); every change is recorded in the inventory ledger. | 6 | Built |
+| FR-38 | Low-stock alerts on the dashboard and a low-stock list (stock ≤ product's threshold). | 6 | Built |
+| FR-39 | List orders with filters (status, payment status, date range, search by reference/customer) and pagination. | 6 | Built |
+| FR-40 | View an order: customer contact, delivery address, items, totals, payment, status history. | 6 | Built |
+| FR-41 | Change order status only along permitted transitions (section 5.1); each change is time-stamped in the status history. | 6 | Built |
+| FR-42 | Cancel an order (with a reason) — stock is restored automatically and recorded. | 6 | Built |
+| FR-43 | Record payment status and method: mark paid, failed or refunded; verify bank transfer references. | 6 | Built |
+| FR-44 | View customers (name, email, phone, order count, total spent) and a customer's orders; activate/deactivate customer accounts; set a temporary password for a customer who has forgotten theirs. | 6 | Built |
+| FR-45 | Reports for a selected date range: orders, sales, order-status totals, best-selling products, current inventory, low-stock products. | 6 | Built |
+| FR-46 | Export each report to CSV. | 6 | Built |
+| FR-47 | View inventory movement history (per product and overall) and the admin activity log. | 6 | Built |
+| FR-48 | Edit store settings: contact details, delivery fee, free-delivery threshold, payment methods on/off, bank details. | 6 | Built |
 | FR-49 | Create the first administrator from a command-line script only (no default admin account, no public admin registration). | 3 | Built |
 
 ## 4. Non-functional requirements
@@ -88,10 +88,10 @@
 | NFR-05 | Security | Session cookie `HttpOnly`, `SameSite=Lax`, strict mode; session ID regenerated after login; full session destroy on logout; idle timeout. | 3 | Built |
 | NFR-06 | Security | Role checks on the server for every admin page and action; customers can only see their own orders and addresses. | 3 | Built |
 | NFR-07 | Security | Login rate limiting: after 5 failed attempts for an email or 20 from an IP in 15 minutes, further attempts are blocked temporarily. | 3 | Built |
-| NFR-08 | Security | Image uploads: max 2 MB, JPEG/PNG/WebP only, checked by extension, `finfo` MIME type and `getimagesize`, re-encoded with GD, saved under a random name; PHP execution disabled in the uploads folder. | 6 | Planned |
+| NFR-08 | Security | Image uploads: max 2 MB, JPEG/PNG/WebP only, checked by extension, `finfo` MIME type and `getimagesize`, re-encoded with GD, saved under a random name; PHP execution disabled in the uploads folder. | 6 | Built |
 | NFR-09 | Security | Credentials in `config/config.php`, outside `public/`, excluded from Git; `app/`, `config/`, `sql/`, `storage/`, `docs/`, `scripts/` denied to browsers. | 3 | Built |
 | NFR-10 | Security | Customer-facing errors are generic; details go to `storage/logs/` (never passwords or payment data). | 3 | Built |
-| NFR-11 | Security | Application connects with a least-privilege MySQL user (`giftaura_app`: SELECT, INSERT, UPDATE, DELETE on `giftaura_db` only). | 2 | Planned |
+| NFR-11 | Security | Application connects with a least-privilege MySQL user (`giftaura_app`: SELECT, INSERT, UPDATE, DELETE on `giftaura_db` only). | 2 | Built |
 | NFR-12 | Integrity | Order placement, cancellation and stock adjustment run in database transactions with row locks; stock can never go below zero. | 5 | Built |
 | NFR-13 | Integrity | Prices and totals are always recalculated on the server from database prices; browser-submitted prices are ignored. | 5 | Built |
 | NFR-14 | Integrity | Order items store name, SKU, unit price and quantity as a snapshot. | 5 | Built |
@@ -100,7 +100,7 @@
 | NFR-17 | Usability | Purple-and-white GiftAura visual identity; consistent typography; accessible colour contrast and form labels. | 4–7 | Planned |
 | NFR-18 | Performance | Indexed queries; product listings paginated (12 per page); pages render in under 1 s on the local XAMPP server with sample data. | 4 | Planned |
 | NFR-19 | Maintainability | Modular PHP: shared core (database, session, auth, CSRF, validation, view) plus one service per domain (products, cart, orders, payments, inventory, reports). | 3 | Built |
-| NFR-20 | Portability | Runs on XAMPP (PHP 8.2, MariaDB 10.4) with no Composer packages or Node tools. MariaDB port is set in config (3307 on the development laptop). | 3 | Planned |
+| NFR-20 | Portability | Runs on XAMPP (PHP 8.2, MariaDB 10.4) with no Composer packages or Node tools. MariaDB port is set in config (3307 on the development laptop). | 3 | Built |
 | NFR-21 | Localisation | Currency LKR shown as `Rs. 4,500.00`; times in Asia/Colombo; utf8mb4 so Sinhala and Tamil text is stored correctly. | 3 | Built |
 
 ---

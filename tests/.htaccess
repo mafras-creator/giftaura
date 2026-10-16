@@ -1,0 +1,2 @@
+# GiftAura: test files must never be reachable from a browser.
+Require all denied

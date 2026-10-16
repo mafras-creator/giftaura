@@ -17,3 +17,8 @@ desktop.ini
 # Database exports / backups may contain customer data
 *.sql.bak
 backups/
+
+# Test run artefacts
+tests/test.db
+tests/*.jar
+tests/*.txt

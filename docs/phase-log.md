@@ -133,3 +133,44 @@ The real `seed.sql` was loaded into an SQLite copy of the schema (same tables an
 A test run also exposed a portability problem in the login-attempt clean-up query (it used MySQL-only date syntax and could interrupt a login under the test database). It was rewritten to use a date calculated in PHP, which works everywhere.
 
 **Note:** the row-lock (`FOR UPDATE`) behaviour itself is MariaDB-specific; the SQLite test database achieves the same protection by locking the whole database during a write. The race test should be repeated on the laptop in Phase 8.
+
+**Tested on the laptop:** a real COD order (GA261016-QDTTZS, Sample Scented Candle Set, Rs 2,750 + Rs 400 = Rs 3,150) was placed on MariaDB and confirmed on screen. Phase 5 committed to Git.
+
+## Phase 6 — Administration panel (16 Oct 2026)
+
+### Files
+| Status | Files |
+|---|---|
+| New services | `CategoryAdminService.php`, `ProductAdminService.php`, `OrderAdminService.php`, `CustomerAdminService.php`, `ReportService.php`, `ActivityLogService.php`; `app/core/ImageUploader.php` |
+| Changed services | `SettingsService.php` (validated update), `DashboardService.php` (sales, orders, payments), `helpers.php` (`slugify`) |
+| New admin pages | `public/admin/orders.php`, `order.php`, `products.php`, `product-edit.php`, `categories.php`, `inventory.php`, `customers.php`, `customer.php`, `reports.php`, `report-export.php`, `activity.php`, `settings.php` (and updated `index.php`) |
+| New views | `app/views/admin/*.php` for each page; partial `movement-list.php`; full admin sidebar in `layouts/admin.php` |
+| Assets | `admin.css` (forms, tables, tabs, image grid, chart, settings), `admin.js` (auto-submit filters, image preview, double-submit guard) |
+| Tests | `tests/` folder with the SQLite test harness and both end-to-end scripts (blocked from the browser) |
+
+### Design decisions
+- **Products are deactivated, never deleted**, because orders and the stock ledger refer to them. Empty categories may be deleted; others are deactivated.
+- **Stock is only changed through the stock box / inventory page**, each change writing a ledger row with a reason. Corrections require a note; stock can never go below zero.
+- **Image uploads:** extension + real MIME (`finfo`) + `getimagesize` + size and dimension limits, then **re-encoded with GD** into a new file with a random name. This strips hidden code and EXIF/GPS data. Uploads folder cannot run PHP.
+- **Order workflow** enforced by `OrderService::TRANSITIONS`; confirming an unpaid bank-transfer order needs an explicit "confirm before payment" tick.
+- **Payment workflow:** pending/awaiting → paid/failed, failed → paid, paid → refunded (refund requires a note). A cancelled order cannot be marked paid. Who and when are recorded.
+- **Reports** use one definition everywhere (see `docs/01-requirements.md` §5.5); sales are summed from `orders`, never from a join, so each order counts once. A daily bar chart is drawn as SVG without any chart library.
+- **CSV export** includes a UTF-8 marker (Sinhala/Tamil safe in Excel) and neutralises cells beginning with `= + - @` (CSV/formula injection).
+- **Temporary passwords** are random, shown once to the admin, stored only as a hash and never logged. Admin accounts cannot be deactivated from the customer screen.
+- **Activity log** records every admin action (never passwords or bank numbers; settings changes record only *which* keys changed).
+
+### Tests run by Claude — `tests/admin_e2e.sh` on a fresh SQLite copy: **106 passed, 0 failed**
+| Area | What was checked | Result |
+|---|---|---|
+| Access control (14) | Customer gets 403 on all 11 admin pages incl. CSV export and a forged settings POST; guest redirected to login; all 10 pages load for the admin | ✅ |
+| Categories (10) | Auto slug; duplicate slug refused; category with children cannot become a child; subcategory cannot be a parent; non-empty category not deleted; XSS in names escaped; empty category deleted; deactivating a subcategory hides its products | ✅ |
+| Products (11) | Create with opening stock written to the ledger; duplicate slug, negative price, 3-decimal price and unknown category refused; price change logged; deactivate → 404 in shop; search and stock filters | ✅ |
+| Image security (11) | Valid JPEG/PNG accepted with random names; `.php` file, PHP renamed to `.jpg`, too-small and 2.5 MB files refused; **JPEG with PHP code appended is accepted but the code is removed by re-encoding**; no stray files; main image switching and deletion (file removed too) | ✅ |
+| Stock (5) | Restock +5; correction without note refused; −2 accepted; −500 refused; negative restock refused; ledger sum = stock | ✅ |
+| Orders & payments (17) | Cannot skip pending → delivered; full workflow with 5 history rows; delivered cannot be cancelled; COD paid with time and admin; customer sees the new status; unpaid bank transfer blocked from confirmation unless overridden; refund only after paid and only with a note; admin cancellation restores stock; cancelled order cannot be marked paid | ✅ |
+| Reports (6) | Gross sales and collected revenue exclude cancelled and refunded orders; status totals include cancelled; best seller correct; invalid dates fall back with a message | ✅ |
+| CSV (5) | `text/csv`; one row per order; `=HYPERLINK(...)` neutralised to `'=HYPERLINK(...)`; inventory export; unknown report 404 | ✅ |
+| Customers (8) | Total spent excludes cancelled/refunded; deactivation logs the customer out and blocks login; admin cannot be deactivated here; temporary password shown once, not logged, and works for login | ✅ |
+| Settings (9) | Invalid fee refused; both payment methods cannot be disabled; values saved and normalised; phone appears on Contact page; bank number not in activity log; dashboard shows today's sales | ✅ |
+
+The Phase 5 shop tests (`tests/shop_e2e.sh`) were re-run on the Phase 6 code: **54 passed, 0 failed** (no regressions).
