@@ -178,7 +178,7 @@ $useNew = ($old['address_id'] ?? 'new') === 'new' || $addresses === [];
                 <div><dt>Discount</dt><dd><?= e(money(0)) ?></dd></div>
                 <div class="totals__grand"><dt>Total to pay</dt><dd><?= e(money($cart['total'])) ?></dd></div>
             </dl>
-            <button type="submit" class="btn btn--primary btn--block"<?= $methods === [] ? ' disabled' : '' ?>>Place order</button>
+            <button type="submit" class="btn btn--primary btn--block" data-loading-text="Placing your order…"<?= $methods === [] ? ' disabled' : '' ?>>Place order</button>
             <p class="summary-card__note">By placing the order you agree to pay <?= e(money($cart['total'])) ?> using the method chosen above.</p>
             <a class="summary-card__link" href="<?= e(url('cart.php')) ?>">Edit cart</a>
         </aside>

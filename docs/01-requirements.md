@@ -4,7 +4,7 @@
 |---|---|
 | Project | E-Commerce Web System for GiftAura (MIT final-year Software Development Project, South Eastern University of Sri Lanka) |
 | Document | Functional and non-functional requirements, business rules, scope |
-| Version | 1.4 — updated at end of Phase 6 |
+| Version | 1.5 — updated at end of Phase 7 |
 | Stack | HTML5, CSS3, vanilla JavaScript, PHP 8.2, MariaDB 10.4, Apache (XAMPP) |
 
 **Status key:** `Planned` → `Built` → `Tested` (with the test case ID that proved it). This table is updated at the end of every phase. Nothing is marked `Tested` unless a test was actually executed.
@@ -95,9 +95,9 @@
 | NFR-12 | Integrity | Order placement, cancellation and stock adjustment run in database transactions with row locks; stock can never go below zero. | 5 | Built |
 | NFR-13 | Integrity | Prices and totals are always recalculated on the server from database prices; browser-submitted prices are ignored. | 5 | Built |
 | NFR-14 | Integrity | Order items store name, SKU, unit price and quantity as a snapshot. | 5 | Built |
-| NFR-15 | Usability | Responsive layout for mobile (≥ 360 px), tablet and desktop. | 4–7 | Planned |
-| NFR-16 | Usability | Every page has clear empty, validation-error, success and error states; forms keep entered values after a validation error. | 4–7 | Planned |
-| NFR-17 | Usability | Purple-and-white GiftAura visual identity; consistent typography; accessible colour contrast and form labels. | 4–7 | Planned |
+| NFR-15 | Usability | Responsive layout for mobile (≥ 360 px), tablet and desktop. | 4–7 | Built |
+| NFR-16 | Usability | Every page has clear empty, validation-error, success and error states; forms keep entered values after a validation error. | 4–7 | Built |
+| NFR-17 | Usability | Purple-and-white GiftAura visual identity; consistent typography; accessible colour contrast and form labels. | 4–7 | Built |
 | NFR-18 | Performance | Indexed queries; product listings paginated (12 per page); pages render in under 1 s on the local XAMPP server with sample data. | 4 | Planned |
 | NFR-19 | Maintainability | Modular PHP: shared core (database, session, auth, CSRF, validation, view) plus one service per domain (products, cart, orders, payments, inventory, reports). | 3 | Built |
 | NFR-20 | Portability | Runs on XAMPP (PHP 8.2, MariaDB 10.4) with no Composer packages or Node tools. MariaDB port is set in config (3307 on the development laptop). | 3 | Built |

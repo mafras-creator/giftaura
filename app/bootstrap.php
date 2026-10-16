@@ -89,6 +89,11 @@ if (PHP_SAPI !== 'cli' && !headers_sent()) {
     header("Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self'; "
          . "script-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'");
     header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
+    header('Cross-Origin-Opener-Policy: same-origin');
+    header_remove('X-Powered-By'); // do not advertise the PHP version
+    if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+        header('Strict-Transport-Security: max-age=31536000'); // only meaningful on a real HTTPS server
+    }
 }
 
 // ---------------------------------------------------------------------
@@ -96,4 +101,10 @@ if (PHP_SAPI !== 'cli' && !headers_sent()) {
 // ---------------------------------------------------------------------
 if (PHP_SAPI !== 'cli') {
     Session::start();
+    // Pages for logged-in users contain private data (orders, addresses, admin screens):
+    // tell the browser not to keep them, so "Back" after logging out cannot show them.
+    if (isset($_SESSION['user_id']) && !headers_sent()) {
+        header('Cache-Control: no-store, private');
+        header('Pragma: no-cache');
+    }
 }

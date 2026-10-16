@@ -54,7 +54,7 @@
             </div>
             <p class="form-hint">At least 8 characters, including a letter and a number.</p>
 
-            <button type="submit" class="btn btn--primary btn--block">Create account</button>
+            <button type="submit" class="btn btn--primary btn--block" data-loading-text="Creating your account…">Create account</button>
         </form>
 
         <p class="auth__switch">Already have an account? <a href="<?= e(url('login.php')) ?>">Log in</a></p>

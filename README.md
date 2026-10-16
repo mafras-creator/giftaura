@@ -5,7 +5,7 @@ An online shop for the GiftAura gift store: flower bouquets, beauty creams and g
 
 **Stack:** HTML5 · CSS3 · vanilla JavaScript · PHP 8.2 · MariaDB 10.4 · Apache (XAMPP). No frameworks and no Composer packages.
 
-> **Project status: Phase 6 complete.** The customer shop (catalogue, cart, checkout, orders, tracking, addresses) and the full administration panel (dashboard, orders and payments, products and secure image upload, categories, inventory and stock ledger, customers, reports with CSV export, activity log, store settings) work. Phase 7 adds final security hardening and polish. See `docs/01-requirements.md` for the status of each requirement.
+> **Project status: Phase 7 complete.** All customer and administration features are built, and security hardening is done (see `docs/security-checklist.md`). Phase 8 is full testing on MariaDB; Phase 9 completes the user guides. See `docs/01-requirements.md` for the status of each requirement.
 
 ---
 
@@ -81,6 +81,8 @@ Full tree: `docs/04-file-structure.md`.
 | System architecture, order and payment workflows | `docs/02-architecture.md` |
 | Database design and ER diagram | `docs/03-database-design.md` |
 | File structure | `docs/04-file-structure.md` |
+| Security checklist (controls, how to test them, known limitations) | `docs/security-checklist.md` |
+| Phase-by-phase log of files and test results | `docs/phase-log.md` |
 | All diagrams as pictures | `docs/diagrams.html` — open the file directly from disk (double-click). It needs an internet connection the first time to load the diagram library. Rebuild with `C:\xampp\php\php.exe scripts\build_diagrams.php`. |
 
 ## 5. Payments

@@ -11,7 +11,7 @@ $cards = [
     ['Low / out of stock', $summary['low_stock'] . ' / ' . $summary['out_of_stock'], 'Active products needing stock', ($summary['low_stock'] + $summary['out_of_stock']) > 0 ? 'stat-card--danger' : '', 'admin/inventory.php', []],
 ];
 ?>
-<p class="admin-lead">Welcome back, <?= e($user['full_name']) ?>. All figures are read live from the database. Sales exclude cancelled orders and refunded payments.</p>
+<p class="admin-lead">All figures are read live from the database. Sales exclude cancelled orders and refunded payments.</p>
 
 <section class="stat-grid" aria-label="Store summary">
     <?php foreach ($cards as [$label, $value, $note, $modifier, $path, $query]): ?>

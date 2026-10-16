@@ -68,10 +68,21 @@
         form.addEventListener('submit', function (event) {
             if (event.defaultPrevented) { return; }
             var button = form.querySelector('button[type="submit"]');
-            if (button) { setTimeout(function () { button.disabled = true; }, 0); }
+            if (button) { setTimeout(function () {
+                    button.disabled = true;
+                    button.setAttribute('aria-busy', 'true');
+                    if (button.hasAttribute('data-loading-text')) {
+                        button.setAttribute('data-original-text', button.textContent);
+                        button.textContent = button.getAttribute('data-loading-text');
+                    }
+                }, 0); }
         });
     });
     window.addEventListener('pageshow', function () {
-        document.querySelectorAll('button[type="submit"]:disabled').forEach(function (b) { b.disabled = false; });
+        document.querySelectorAll('button[type="submit"]:disabled').forEach(function (b) {
+            b.disabled = false;
+            b.removeAttribute('aria-busy');
+            if (b.hasAttribute('data-original-text')) { b.textContent = b.getAttribute('data-original-text'); }
+        });
     });
 })();

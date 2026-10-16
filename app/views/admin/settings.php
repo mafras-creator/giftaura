@@ -45,7 +45,7 @@ foreach ($rows as $row) {
     <?php endforeach; ?>
 
     <div class="sticky-actions">
-        <button type="submit" class="btn btn--primary">Save settings</button>
+        <button type="submit" class="btn btn--primary" data-loading-text="Saving…">Save settings</button>
         <span class="muted">Empty contact or bank fields are simply hidden on the website.</span>
     </div>
 </form>

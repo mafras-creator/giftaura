@@ -174,3 +174,31 @@ A test run also exposed a portability problem in the login-attempt clean-up quer
 | Settings (9) | Invalid fee refused; both payment methods cannot be disabled; values saved and normalised; phone appears on Contact page; bank number not in activity log; dashboard shows today's sales | ✅ |
 
 The Phase 5 shop tests (`tests/shop_e2e.sh`) were re-run on the Phase 6 code: **54 passed, 0 failed** (no regressions).
+
+**Tested on the laptop:** admin dashboard on MariaDB showed sales today Rs 12,200 (3,150 + 3,150 + 5,900), collected Rs 6,300 (two orders marked paid), 1 pending, 2 in progress, low/out of stock 2/1 — all matching the definitions. Phase 6 committed to Git (`07dc359`).
+
+## Phase 7 — Security hardening and polish (16 Oct 2026)
+
+### Code review performed
+- Every page that handles POST calls `Csrf::verify()` — checked automatically for all files in `public/` (none missing).
+- Every unescaped `<?= ... ?>` in templates was reviewed: all print only fixed strings (e.g. `' selected'`) or trusted helpers (`csrf_field`, partials, badges).
+- Every SQL statement built with string interpolation only joins fixed WHERE fragments or whitelisted ORDER BY clauses; all user values are bound parameters.
+
+### Changes
+| Area | Change |
+|---|---|
+| Headers (`app/bootstrap.php`) | `X-Powered-By` removed; `Cross-Origin-Opener-Policy: same-origin`; HSTS when served over HTTPS; `Cache-Control: no-store, private` for every page shown to a logged-in user |
+| Root `.htaccess` | `display_errors` forced off for the whole site; `env-check.php`, `phpinfo.php`, `info.php`, `test.php` denied; security headers on static files |
+| Admin dashboard | Duplicate welcome line removed; money values no longer wrap (responsive font size, wider cards) |
+| Admin top bar | "Change password" link |
+| Shop header | Desktop menu now starts at 1080 px so medium screens use the menu button instead of a crowded header |
+| Small phones (≤ 420 px) | Product cards, hero search, bank details and product facts stack neatly |
+| Loading states | Log in, Create account, Place order, Upload and Save settings show "Please wait"-style text and `aria-busy` after the first click |
+| Documentation | `docs/security-checklist.md` (38 controls with test steps, known limitations, pre-demo checklist) |
+
+### Tests run by Claude after the changes
+- `php -l` on every PHP file and `node --check` on both JavaScript files: no errors.
+- `tests/admin_e2e.sh`: **106 passed, 0 failed**. `tests/shop_e2e.sh`: **54 passed, 0 failed**.
+- Headers: guest page has `X-Frame-Options`, `Cross-Origin-Opener-Policy`, no `X-Powered-By`; logged-in page has `Cache-Control: no-store, private`.
+
+**Not verifiable here (no Apache in the test workspace):** the `.htaccess` rules themselves. They are part of the Phase 8 manual tests on the laptop.

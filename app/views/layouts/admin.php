@@ -69,6 +69,7 @@ $pendingCount = (int) Database::fetchValue("SELECT COUNT(*) FROM orders WHERE st
             <h1 class="admin-topbar__title"><?= e($title ?? 'Admin') ?></h1>
             <div class="admin-topbar__user">
                 <span class="admin-topbar__name"><?= e($user['full_name'] ?? '') ?></span>
+                <a href="<?= e(url('account/password.php')) ?>">Change password</a>
                 <form method="post" action="<?= e(url('logout.php')) ?>">
                     <?= csrf_field() ?>
                     <button type="submit" class="btn btn--ghost btn--small">Log out</button>

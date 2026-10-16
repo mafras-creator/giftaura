@@ -155,7 +155,7 @@ $formUrl = $isNew ? url('admin/product-edit.php') : url('admin/product-edit.php'
                                 <label for="alt_text">Image description <span class="optional">(for screen readers)</span></label>
                                 <input type="text" id="alt_text" name="alt_text" maxlength="150" placeholder="e.g. Red roses wrapped in pink paper">
                             </div>
-                            <button type="submit" class="btn btn--primary btn--small">Upload</button>
+                            <button type="submit" class="btn btn--primary btn--small" data-loading-text="Uploading…">Upload</button>
                         </form>
                     <?php endif; ?>
                 </div>

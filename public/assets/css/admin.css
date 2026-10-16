@@ -99,12 +99,12 @@ h1, h2, h3 { margin: 0; color: var(--plum-900); }
 .alert__close { background: none; border: 0; font-size: 1.3rem; line-height: 1; cursor: pointer; color: inherit; }
 
 /* ---------- Stat cards ---------- */
-.stat-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.stat-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); }
 .stat-card { background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--plum-600); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
 .stat-card--warning { border-left-color: #c98a00; }
 .stat-card--danger  { border-left-color: var(--error); }
 .stat-card__label { font: 600 .78rem var(--font-body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-.stat-card__value { font-family: var(--font-display); font-size: 2.1rem; line-height: 1.1; margin: 6px 0 2px; color: var(--plum-900); }
+.stat-card__value { font-family: var(--font-display); font-size: clamp(1.45rem, 1.1rem + 0.9vw, 2rem); line-height: 1.15; margin: 6px 0 2px; color: var(--plum-900); white-space: nowrap; }
 .stat-card__note { margin: 0; font-size: .85rem; color: var(--muted); }
 
 /* ---------- Panels / tables ---------- */
@@ -275,3 +275,13 @@ code { font-family: Consolas, "Courier New", monospace; font-size: .88em; backgr
 .pagination__link:hover { border-color: var(--plum-500); }
 .pagination__link.is-current { background: var(--plum-700); color: #fff; border-color: var(--plum-700); }
 .pagination__gap { align-self: center; color: var(--muted); }
+
+/* ---------- Phase 7 polish ---------- */
+.admin-topbar__user a { font-size: .85rem; }
+button[aria-busy="true"] { cursor: progress; opacity: .75; }
+@media (max-width: 640px) {
+    .admin-main { gap: 14px; }
+    .order-summary-bar__badges { gap: 10px; }
+    .kv div { grid-template-columns: 1fr; gap: 2px; }
+    .filters input, .filters select { width: 100% !important; min-width: 0; }
+}

@@ -19,6 +19,26 @@ Options -Indexes
 ErrorDocument 404 /giftaura/404.php
 ErrorDocument 403 /giftaura/403.php
 
+# Never show PHP errors in the browser, even before the application starts
+# (the application logs them to storage/logs instead).
+<IfModule php_module>
+    php_flag display_errors off
+</IfModule>
+
+# The old XAMPP environment-check page must never be public.
+<FilesMatch "^(env-check|phpinfo|info|test)\.php$">
+    Require all denied
+</FilesMatch>
+
+# Security headers for static files (PHP pages send their own from app/bootstrap.php).
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js|svg|png|jpe?g|webp|ico)$">
+        Header set X-Content-Type-Options "nosniff"
+        Header set X-Frame-Options "DENY"
+        Header set Referrer-Policy "same-origin"
+    </FilesMatch>
+</IfModule>
+
 # Never serve hidden files (.git, .env, .htaccess, ...)
 <FilesMatch "^\.">
     Require all denied

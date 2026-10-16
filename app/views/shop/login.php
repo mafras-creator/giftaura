@@ -28,7 +28,7 @@
                 </div>
             </div>
 
-            <button type="submit" class="btn btn--primary btn--block">Log in</button>
+            <button type="submit" class="btn btn--primary btn--block" data-loading-text="Logging in…">Log in</button>
         </form>
 
         <p class="auth__switch">New to GiftAura? <a href="<?= e(url('register.php')) ?>">Create an account</a></p>
