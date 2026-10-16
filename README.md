@@ -5,7 +5,7 @@ An online shop for the GiftAura gift store: flower bouquets, beauty creams and g
 
 **Stack:** HTML5 · CSS3 · vanilla JavaScript · PHP 8.2 · MariaDB 10.4 · Apache (XAMPP). No frameworks and no Composer packages.
 
-> **Project status: Phase 2 (design) complete.** The database can be created and seeded. The website pages are built from Phase 3 onwards. See `docs/01-requirements.md` for the status of each requirement.
+> **Project status: Phase 3 complete.** Database, configuration, login, registration, customer profile, password change, the protected admin dashboard and the shared page design work. The product catalogue arrives in Phase 4. See `docs/01-requirements.md` for the status of each requirement.
 
 ---
 
@@ -41,16 +41,20 @@ Place the project folder at `C:\xampp\htdocs\giftaura\`.
 
 > Re-importing `schema.sql` deletes all GiftAura data and starts again. It never touches other databases.
 
-### 2.4 Configure the application *(Phase 3)*
-Copy `config/config.example.php` to `config/config.php` and enter the database port and the password from step 2.2.
+### 2.4 Configure the application
+Open PowerShell in the project folder and run:
+```
+C:\xampp\php\php.exe scripts\setup.php
+```
+Press **Enter** to accept each suggested value, and type the `giftaura_app` password from step 2.2 when asked. The script tests the connection and writes `config/config.php` (never committed to Git). To configure by hand instead, copy `config/config.example.php` to `config/config.php` and edit it.
 
-### 2.5 Create the first administrator *(Phase 3)*
-There is no default admin account. Run, from the project folder:
+### 2.5 Create the first administrator
+There is no default admin account and no way to become an admin through the website. Run:
 ```
 C:\xampp\php\php.exe scripts\create_admin.php
 ```
 
-### 2.6 Open the shop *(Phase 3+)*
+### 2.6 Open the shop
 - Shop: <http://localhost/giftaura/>
 - Admin: <http://localhost/giftaura/admin/>
 

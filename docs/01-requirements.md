@@ -4,7 +4,7 @@
 |---|---|
 | Project | E-Commerce Web System for GiftAura (MIT final-year Software Development Project, South Eastern University of Sri Lanka) |
 | Document | Functional and non-functional requirements, business rules, scope |
-| Version | 1.0 — Phase 2 (design) |
+| Version | 1.1 — updated at end of Phase 3 |
 | Stack | HTML5, CSS3, vanilla JavaScript, PHP 8.2, MariaDB 10.4, Apache (XAMPP) |
 
 **Status key:** `Planned` → `Built` → `Tested` (with the test case ID that proved it). This table is updated at the end of every phase. Nothing is marked `Tested` unless a test was actually executed.
@@ -34,9 +34,9 @@
 | FR-06 | Paginate product listings. | 4 | Planned |
 | FR-07 | Show a product detail page (images, price in LKR, availability, description, category) using the product slug. Inactive products return "not found". | 4 | Planned |
 | FR-08 | Show a placeholder image when a product has no uploaded image. | 4 | Planned |
-| FR-09 | Register a customer account (name, email, phone, password with confirmation). | 3 | Planned |
-| FR-10 | Log in and log out. | 3 | Planned |
-| FR-11 | View and edit profile (name, phone); change password (requires current password). | 3 | Planned |
+| FR-09 | Register a customer account (name, email, phone, password with confirmation). | 3 | Built |
+| FR-10 | Log in and log out. | 3 | Built |
+| FR-11 | View and edit profile (name, phone); change password (requires current password). | 3 | Built |
 | FR-12 | Manage saved delivery addresses, with one default address. | 5 | Planned |
 | FR-13 | Add a product to the cart from the listing and detail pages (guest or customer). | 5 | Planned |
 | FR-14 | Change cart quantities and remove items; cart shows live subtotal from current database prices. | 5 | Planned |
@@ -75,22 +75,22 @@
 | FR-46 | Export each report to CSV. | 6 | Planned |
 | FR-47 | View inventory movement history (per product and overall) and the admin activity log. | 6 | Planned |
 | FR-48 | Edit store settings: contact details, delivery fee, free-delivery threshold, payment methods on/off, bank details. | 6 | Planned |
-| FR-49 | Create the first administrator from a command-line script only (no default admin account, no public admin registration). | 3 | Planned |
+| FR-49 | Create the first administrator from a command-line script only (no default admin account, no public admin registration). | 3 | Built |
 
 ## 4. Non-functional requirements
 
 | ID | Category | Requirement | Phase | Status |
 |---|---|---|---|---|
-| NFR-01 | Security | All database access through PDO prepared statements; emulated prepares disabled. | 3 | Planned |
-| NFR-02 | Security | All output HTML-escaped (`htmlspecialchars`) to prevent XSS. | 3 | Planned |
-| NFR-03 | Security | CSRF token required on every state-changing (POST) request. | 3 | Planned |
-| NFR-04 | Security | Passwords stored with `password_hash()` and checked with `password_verify()`; minimum 8 characters. | 3 | Planned |
-| NFR-05 | Security | Session cookie `HttpOnly`, `SameSite=Lax`, strict mode; session ID regenerated after login; full session destroy on logout; idle timeout. | 3 | Planned |
-| NFR-06 | Security | Role checks on the server for every admin page and action; customers can only see their own orders and addresses. | 3 | Planned |
-| NFR-07 | Security | Login rate limiting: after 5 failed attempts for an email or 20 from an IP in 15 minutes, further attempts are blocked temporarily. | 3 | Planned |
+| NFR-01 | Security | All database access through PDO prepared statements; emulated prepares disabled. | 3 | Built |
+| NFR-02 | Security | All output HTML-escaped (`htmlspecialchars`) to prevent XSS. | 3 | Built |
+| NFR-03 | Security | CSRF token required on every state-changing (POST) request. | 3 | Built |
+| NFR-04 | Security | Passwords stored with `password_hash()` and checked with `password_verify()`; minimum 8 characters. | 3 | Built |
+| NFR-05 | Security | Session cookie `HttpOnly`, `SameSite=Lax`, strict mode; session ID regenerated after login; full session destroy on logout; idle timeout. | 3 | Built |
+| NFR-06 | Security | Role checks on the server for every admin page and action; customers can only see their own orders and addresses. | 3 | Built |
+| NFR-07 | Security | Login rate limiting: after 5 failed attempts for an email or 20 from an IP in 15 minutes, further attempts are blocked temporarily. | 3 | Built |
 | NFR-08 | Security | Image uploads: max 2 MB, JPEG/PNG/WebP only, checked by extension, `finfo` MIME type and `getimagesize`, re-encoded with GD, saved under a random name; PHP execution disabled in the uploads folder. | 6 | Planned |
-| NFR-09 | Security | Credentials in `config/config.php`, outside `public/`, excluded from Git; `app/`, `config/`, `sql/`, `storage/`, `docs/`, `scripts/` denied to browsers. | 3 | Planned |
-| NFR-10 | Security | Customer-facing errors are generic; details go to `storage/logs/` (never passwords or payment data). | 3 | Planned |
+| NFR-09 | Security | Credentials in `config/config.php`, outside `public/`, excluded from Git; `app/`, `config/`, `sql/`, `storage/`, `docs/`, `scripts/` denied to browsers. | 3 | Built |
+| NFR-10 | Security | Customer-facing errors are generic; details go to `storage/logs/` (never passwords or payment data). | 3 | Built |
 | NFR-11 | Security | Application connects with a least-privilege MySQL user (`giftaura_app`: SELECT, INSERT, UPDATE, DELETE on `giftaura_db` only). | 2 | Planned |
 | NFR-12 | Integrity | Order placement, cancellation and stock adjustment run in database transactions with row locks; stock can never go below zero. | 5 | Planned |
 | NFR-13 | Integrity | Prices and totals are always recalculated on the server from database prices; browser-submitted prices are ignored. | 5 | Planned |
@@ -99,9 +99,9 @@
 | NFR-16 | Usability | Every page has clear empty, validation-error, success and error states; forms keep entered values after a validation error. | 4–7 | Planned |
 | NFR-17 | Usability | Purple-and-white GiftAura visual identity; consistent typography; accessible colour contrast and form labels. | 4–7 | Planned |
 | NFR-18 | Performance | Indexed queries; product listings paginated (12 per page); pages render in under 1 s on the local XAMPP server with sample data. | 4 | Planned |
-| NFR-19 | Maintainability | Modular PHP: shared core (database, session, auth, CSRF, validation, view) plus one service per domain (products, cart, orders, payments, inventory, reports). | 3 | Planned |
+| NFR-19 | Maintainability | Modular PHP: shared core (database, session, auth, CSRF, validation, view) plus one service per domain (products, cart, orders, payments, inventory, reports). | 3 | Built |
 | NFR-20 | Portability | Runs on XAMPP (PHP 8.2, MariaDB 10.4) with no Composer packages or Node tools. MariaDB port is set in config (3307 on the development laptop). | 3 | Planned |
-| NFR-21 | Localisation | Currency LKR shown as `Rs. 4,500.00`; times in Asia/Colombo; utf8mb4 so Sinhala and Tamil text is stored correctly. | 3 | Planned |
+| NFR-21 | Localisation | Currency LKR shown as `Rs. 4,500.00`; times in Asia/Colombo; utf8mb4 so Sinhala and Tamil text is stored correctly. | 3 | Built |
 
 ---
 

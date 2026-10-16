@@ -14,6 +14,11 @@ Options -Indexes
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
 
+# Friendly GiftAura error pages (paths include the /giftaura base folder;
+# change them if the project is moved to a different folder).
+ErrorDocument 404 /giftaura/404.php
+ErrorDocument 403 /giftaura/403.php
+
 # Never serve hidden files (.git, .env, .htaccess, ...)
 <FilesMatch "^\.">
     Require all denied
