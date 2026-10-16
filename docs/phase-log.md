@@ -36,4 +36,51 @@ Requirements, architecture, ER diagram, file structure, `schema.sql`, `seed.sql`
 | T3-07 | HTTP: security headers present; session cookie `HttpOnly; SameSite=Lax; path=/giftaura/` | ✅ |
 | T3-08 | HTTP: unknown page → 404 page; database down → generic 500 page with no SQL details; error written to log | ✅ |
 
-**Not yet run (needs the real database on the laptop):** registration, login, wrong-password message, rate-limit lock after 5 failures, profile update, password change, admin dashboard figures, customer blocked from admin (403). These are tests T3-09 to T3-16 in the Phase 3 instructions and are recorded here once done.
+**Still to run on the laptop:** profile update and password change (registration, login, lock-out and admin blocking were later tested — see T3-09 to T3-12 under Phase 4).
+
+**Tested on the laptop (16 Oct 2026):** `scripts/setup.php` connected and wrote the configuration; `scripts/create_admin.php` created the administrator; admin login showed the dashboard with Active products 10, categories 4, customers 1, low stock 2, out of stock 1 and the correct three low-stock rows; a customer account was registered. ✅
+Phase 3 committed to Git (`101cd05`).
+
+## Phase 4 — Product catalogue (16 Oct 2026)
+
+### Files
+| Status | Files |
+|---|---|
+| New | `app/services/ProductService.php`; `public/products.php`, `product.php`, `about.php`, `contact.php`; `app/views/shop/products.php`, `product.php`, `about.php`, `contact.php`; `app/views/partials/product-card.php`, `pagination.php` |
+| Changed | `app/services/CategoryService.php` (tree, slugs, subcategories), `app/helpers.php` (`product_image_url`, `stock_status`), `public/index.php` + `app/views/shop/home.php` (featured, latest, category links, search), `app/views/layouts/shop.php` (Shop/About/Contact menu, header search, footer links), `public/assets/css/shop.css`, `public/assets/js/shop.js` |
+
+### Design decisions
+- Search uses `LIKE` on name, short description, description and SKU; every word must match. Wildcards typed by the user (`%`, `_`) are escaped. The FULLTEXT index in the schema remains available if the catalogue grows large.
+- A product is visible only if it is active and its category (and that category's parent) is active.
+- Sort options and filter values are whitelisted/validated; invalid prices are ignored with a message; min/max are swapped if reversed; page numbers are clamped.
+- No "Add to cart" button yet: it is added in Phase 5 together with the working cart, so there is no button without a function.
+
+### Tests run by Claude
+The real `seed.sql` was loaded into an SQLite copy of the schema (same tables and columns) and the actual pages were requested over HTTP. MariaDB-specific behaviour is still to be confirmed on the laptop.
+
+| ID | Test | Expected | Result |
+|---|---|---|---|
+| T4-01 | Homepage | 3 category cards with counts 4 / 3 / 3, 4 featured, 8 latest | ✅ |
+| T4-02 | All products | 10 (inactive sample hidden) | ✅ |
+| T4-03 | Category Flower Bouquets (includes Rose Bouquets subcategory) | 4 | ✅ |
+| T4-04 | Subcategory Rose Bouquets, breadcrumb shows parent | 2, parent link | ✅ |
+| T4-05 | Unknown category / SQL text in slug | 404 | ✅ |
+| T4-06 | Search "rose" / "pink rose" / "SAMPLE-GI" / "%" | 2 / 1 / 3 / 0 | ✅ |
+| T4-07 | Search `' OR 1=1 --` | 0 results, no error (SQL injection blocked) | ✅ |
+| T4-08 | Search `<script>alert(1)</script>` | shown as text, never executed (XSS blocked) | ✅ |
+| T4-09 | Price 2000–3000, and reversed 3000–2000 | 4 and 4 | ✅ |
+| T4-10 | Invalid price `abc` | ignored with a warning | ✅ |
+| T4-11 | In stock only | 9 | ✅ |
+| T4-12 | Sort low→high / high→low / A–Z | Rs. 1,800 / Rs. 6,200 / Chocolate Gift Box first | ✅ |
+| T4-13 | Invalid sort, page 99, page −1 | page still loads (fallbacks) | ✅ |
+| T4-14 | 25 products → pagination | 3 pages, links keep the sort | ✅ |
+| T4-15 | Product detail: price, breadcrumb, 3 related items | correct | ✅ |
+| T4-16 | Out-of-stock and low-stock labels | "Out of stock", "Only 3 left" | ✅ |
+| T4-17 | Inactive product / unknown slug / `../../x` | 404 | ✅ |
+| T4-18 | Parent category deactivated | its subcategory and products disappear (404) | ✅ |
+| T4-19 | Product with uploaded image / image file missing | image shown / placeholder shown | ✅ |
+| T4-20 | Contact page with empty settings | "not been published yet" message, nothing invented | ✅ |
+| T3-09 | Register with a forged `role=admin` field | account created as **customer**; phone normalised | ✅ |
+| T3-10 | Customer opens `admin/` | 403 | ✅ |
+| T3-11 | 6 wrong passwords | 5× "incorrect", then "Too many…"; correct password also refused while locked | ✅ |
+| T3-12 | Login with `next=https://evil.com` and upper-case email | logged in, redirected inside the site | ✅ |

@@ -40,7 +40,18 @@ $hours     = setting('store_hours');
         <nav class="site-nav" id="site-nav" aria-label="Main">
             <ul class="site-nav__links">
                 <li><a class="site-nav__link<?= nav_active('index.php') ?>" href="<?= e(url()) ?>">Home</a></li>
+                <li><a class="site-nav__link<?= nav_active('products.php') ?>" href="<?= e(url('products.php')) ?>">Shop</a></li>
+                <li><a class="site-nav__link<?= nav_active('about.php') ?>" href="<?= e(url('about.php')) ?>">About</a></li>
+                <li><a class="site-nav__link<?= nav_active('contact.php') ?>" href="<?= e(url('contact.php')) ?>">Contact</a></li>
             </ul>
+            <form class="header-search" method="get" action="<?= e(url('products.php')) ?>" role="search">
+                <label class="sr-only" for="header-q">Search products</label>
+                <input type="search" id="header-q" name="q" maxlength="100" placeholder="Search products"
+                       value="<?= e(nav_active('products.php') !== '' ? query_string('q') : '') ?>">
+                <button type="submit" class="header-search__button" aria-label="Search">
+                    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+            </form>
             <ul class="site-nav__account">
                 <?php if ($user === null): ?>
                     <li><a class="site-nav__link<?= nav_active('login.php') ?>" href="<?= e(url('login.php')) ?>">Log in</a></li>
@@ -82,6 +93,17 @@ $hours     = setting('store_hours');
         <div>
             <p class="site-footer__brand"><?= e($storeName) ?></p>
             <p class="site-footer__text"><?= e(setting('store_tagline')) ?></p>
+            <p class="site-footer__text site-footer__note">Cash on delivery and bank transfer. Prices in Sri Lankan rupees (LKR).</p>
+        </div>
+        <div>
+            <h2 class="site-footer__heading">Shop</h2>
+            <ul class="site-footer__links">
+                <?php foreach (CategoryService::topLevel() as $footerCategory): ?>
+                    <li><a href="<?= e(url('products.php', ['category' => $footerCategory['slug']])) ?>"><?= e($footerCategory['name']) ?></a></li>
+                <?php endforeach; ?>
+                <li><a href="<?= e(url('about.php')) ?>">About us</a></li>
+                <li><a href="<?= e(url('contact.php')) ?>">Contact us</a></li>
+            </ul>
         </div>
         <div>
             <h2 class="site-footer__heading">Your account</h2>
@@ -107,10 +129,6 @@ $hours     = setting('store_hours');
                     <?php if ($hours !== ''): ?><li class="pre-line"><?= e($hours) ?></li><?php endif; ?>
                 </ul>
             <?php endif; ?>
-        </div>
-        <div>
-            <h2 class="site-footer__heading">Payments</h2>
-            <p class="site-footer__text">Cash on delivery and bank transfer. Prices in Sri Lankan rupees (LKR).</p>
         </div>
     </div>
     <div class="container site-footer__bottom">

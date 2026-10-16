@@ -155,6 +155,36 @@ function abort(int $status, string $message = ''): never
     exit;
 }
 
+/**
+ * URL of a product image, or the placeholder when there is no image or
+ * the stored name does not match the generated pattern.
+ */
+function product_image_url(?string $fileName): string
+{
+    if ($fileName !== null && preg_match('/^[a-f0-9]{32}\.(jpg|png|webp)$/', $fileName)
+        && is_file(APP_ROOT . '/public/uploads/products/' . $fileName)) {
+        return url('uploads/products/' . $fileName);
+    }
+    return asset('img/placeholder-product.svg');
+}
+
+/**
+ * Availability of a product for customers:
+ * ['key' => in_stock|low_stock|out_of_stock, 'label' => text shown].
+ */
+function stock_status(array $product): array
+{
+    $stock = (int) ($product['stock_quantity'] ?? 0);
+    $threshold = (int) ($product['low_stock_threshold'] ?? 0);
+    if ($stock <= 0) {
+        return ['key' => 'out_of_stock', 'label' => 'Out of stock'];
+    }
+    if ($stock <= $threshold) {
+        return ['key' => 'low_stock', 'label' => 'Only ' . $stock . ' left'];
+    }
+    return ['key' => 'in_stock', 'label' => 'In stock'];
+}
+
 /** Error message under a form field (escaped). Empty string when no error. */
 function field_error(array $errors, string $field): string
 {

@@ -4,7 +4,7 @@
 |---|---|
 | Project | E-Commerce Web System for GiftAura (MIT final-year Software Development Project, South Eastern University of Sri Lanka) |
 | Document | Functional and non-functional requirements, business rules, scope |
-| Version | 1.1 — updated at end of Phase 3 |
+| Version | 1.2 — updated at end of Phase 4 |
 | Stack | HTML5, CSS3, vanilla JavaScript, PHP 8.2, MariaDB 10.4, Apache (XAMPP) |
 
 **Status key:** `Planned` → `Built` → `Tested` (with the test case ID that proved it). This table is updated at the end of every phase. Nothing is marked `Tested` unless a test was actually executed.
@@ -26,14 +26,14 @@
 
 | ID | Requirement | Phase | Status |
 |---|---|---|---|
-| FR-01 | Display the homepage with a hero section, category links, featured products and latest products loaded from the database. | 4 | Planned |
-| FR-02 | List active products by category, including products in its subcategories. | 4 | Planned |
-| FR-03 | Search products by keyword (name, short description, description). | 4 | Planned |
-| FR-04 | Filter products by category, price range and availability (in stock only). | 4 | Planned |
-| FR-05 | Sort products by newest, price low→high, price high→low, and name. | 4 | Planned |
-| FR-06 | Paginate product listings. | 4 | Planned |
-| FR-07 | Show a product detail page (images, price in LKR, availability, description, category) using the product slug. Inactive products return "not found". | 4 | Planned |
-| FR-08 | Show a placeholder image when a product has no uploaded image. | 4 | Planned |
+| FR-01 | Display the homepage with a hero section, category links, featured products and latest products loaded from the database. | 4 | Built |
+| FR-02 | List active products by category, including products in its subcategories. | 4 | Built |
+| FR-03 | Search products by keyword (name, short description, description). | 4 | Built |
+| FR-04 | Filter products by category, price range and availability (in stock only). | 4 | Built |
+| FR-05 | Sort products by newest, price low→high, price high→low, and name. | 4 | Built |
+| FR-06 | Paginate product listings. | 4 | Built |
+| FR-07 | Show a product detail page (images, price in LKR, availability, description, category) using the product slug. Inactive products return "not found". | 4 | Built |
+| FR-08 | Show a placeholder image when a product has no uploaded image. | 4 | Built |
 | FR-09 | Register a customer account (name, email, phone, password with confirmation). | 3 | Built |
 | FR-10 | Log in and log out. | 3 | Built |
 | FR-11 | View and edit profile (name, phone); change password (requires current password). | 3 | Built |
@@ -50,7 +50,7 @@
 | FR-22 | View own order details: items, quantities, prices, delivery charge, total, payment method and status, and a status timeline. | 5 | Planned |
 | FR-23 | Cancel own order while it is still `pending`. | 5 | Planned |
 | FR-24 | Track an order on the Track Order page (own orders only when logged in; guests can look up by order reference + email). | 5 | Planned |
-| FR-25 | Contact / store information page and About page, using details from Settings (empty values are hidden, never invented). | 4 | Planned |
+| FR-25 | Contact / store information page and About page, using details from Settings (empty values are hidden, never invented). | 4 | Built |
 
 ## 3. Functional requirements — administrator side
 
