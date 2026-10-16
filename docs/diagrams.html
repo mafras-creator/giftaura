@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GiftAura Diagrams</title>
+<style>
+  :root { --purple:#5b2a86; --ink:#1f1630; --muted:#6b6280; --line:#e6def0; --bg:#faf8fc; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink); background:var(--bg); }
+  .top { background:var(--purple); color:#fff; padding:20px 24px; }
+  .top h1 { margin:0 0 4px; font-size:1.4rem; }
+  .top p { margin:0; opacity:.85; font-size:.9rem; }
+  main { max-width:1200px; margin:0 auto; padding:24px 16px 48px; }
+  .diagram { background:#fff; border:1px solid var(--line); border-radius:10px; margin:0 0 24px; overflow:hidden; }
+  .diagram header { display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line); }
+  .diagram h2 { margin:0; font-size:1.05rem; color:var(--purple); }
+  .src { color:var(--muted); font-size:.85rem; flex:1; }
+  button { border:1px solid var(--purple); background:#fff; color:var(--purple); border-radius:6px; padding:6px 12px; cursor:pointer; font:inherit; font-size:.85rem; }
+  button:hover { background:var(--purple); color:#fff; }
+  .mermaid { margin:0; padding:16px; overflow-x:auto; text-align:center; background:#fff; }
+  .notice { background:#fff4e5; border:1px solid #f0c27a; padding:12px 16px; border-radius:8px; margin-bottom:24px; display:none; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>GiftAura — System Diagrams</h1>
+  <p>5 diagrams generated from docs/*.md on 2026-10-16 14:44. Regenerate with: php scripts/build_diagrams.php</p>
+</div>
+<main>
+  <div class="notice" id="offline">Diagrams could not be drawn because the Mermaid library did not load. Connect to the internet and refresh, or paste the code shown below into https://mermaid.live.</div>
+    <section class="diagram">
+      <header>
+        <h2>1. Component diagram</h2>
+        <span class="src">from docs/02-architecture.md</span>
+        <button type="button" data-download="d1">Download SVG</button>
+      </header>
+      <pre class="mermaid" id="d1">flowchart TB
+    subgraph Client[&quot;Client&quot;]
+        B[&quot;Web browser&lt;br/&gt;HTML · CSS · JavaScript&quot;]
+    end
+
+    subgraph Server[&quot;Apache + PHP 8.2 (XAMPP)&quot;]
+        HT[&quot;.htaccess&lt;br/&gt;routes /giftaura/* into public/&quot;]
+        subgraph Public[&quot;public/ (only web-reachable folder)&quot;]
+            SP[&quot;Shop pages&lt;br/&gt;index, products, product, cart,&lt;br/&gt;checkout, account, track-order&quot;]
+            AP[&quot;Admin pages&lt;br/&gt;admin/*.php&quot;]
+            AS[&quot;assets/ css · js · img&quot;]
+            UP[&quot;uploads/products/&lt;br/&gt;(PHP execution disabled)&quot;]
+        end
+        subgraph App[&quot;app/ (denied to browsers)&quot;]
+            BS[&quot;bootstrap.php&lt;br/&gt;config · error handling · session&quot;]
+            CORE[&quot;core/&lt;br/&gt;Database · Session · Auth · Csrf ·&lt;br/&gt;Validator · View · Flash · Logger · ImageUploader&quot;]
+            SRV[&quot;services/&lt;br/&gt;Category · Product · Cart · Order ·&lt;br/&gt;Payment · Inventory · Report · User · Settings&quot;]
+            VW[&quot;views/&lt;br/&gt;shop and admin layouts, partials&quot;]
+        end
+        CFG[&quot;config/config.php&lt;br/&gt;(DB credentials, not in Git)&quot;]
+        LOG[&quot;storage/logs/&quot;]
+    end
+
+    DB[(&quot;MariaDB 10.4&lt;br/&gt;giftaura_db :3307&quot;)]
+
+    B --&gt;|HTTP GET / POST| HT --&gt; SP
+    HT --&gt; AP
+    B --&gt;|static files| AS
+    B --&gt;|images| UP
+    SP --&gt; BS
+    AP --&gt; BS
+    BS --&gt; CFG
+    BS --&gt; CORE
+    SP --&gt; SRV
+    AP --&gt; SRV
+    SRV --&gt; CORE
+    SP --&gt; VW
+    AP --&gt; VW
+    CORE --&gt;|PDO prepared statements&lt;br/&gt;user giftaura_app| DB
+    CORE --&gt; LOG
+    SRV --&gt;|ImageUploader| UP</pre>
+    </section>
+    <section class="diagram">
+      <header>
+        <h2>2. Order placement sequence</h2>
+        <span class="src">from docs/02-architecture.md</span>
+        <button type="button" data-download="d2">Download SVG</button>
+      </header>
+      <pre class="mermaid" id="d2">sequenceDiagram
+    autonumber
+    actor C as Customer
+    participant P as checkout.php
+    participant OS as OrderService
+    participant DB as MariaDB
+
+    C-&gt;&gt;P: POST checkout form + CSRF token
+    P-&gt;&gt;P: Auth::requireCustomer, Csrf::verify, validate fields
+    P-&gt;&gt;OS: placeOrder(userId, address, paymentMethod)
+    OS-&gt;&gt;DB: START TRANSACTION
+    OS-&gt;&gt;DB: SELECT cart items JOIN products ... FOR UPDATE
+    alt any product inactive or stock &lt; quantity
+        OS-&gt;&gt;DB: ROLLBACK
+        OS--&gt;&gt;P: error list
+        P--&gt;&gt;C: back to cart with message
+    else all items available
+        OS-&gt;&gt;OS: subtotal from DB prices, delivery fee from settings, total
+        OS-&gt;&gt;DB: INSERT orders (snapshot of contact, address, totals)
+        OS-&gt;&gt;DB: INSERT order_items (name, SKU, unit price, qty)
+        OS-&gt;&gt;DB: UPDATE products SET stock = stock - qty
+        OS-&gt;&gt;DB: INSERT inventory_movements (order_placed)
+        OS-&gt;&gt;DB: INSERT payments (method, pending, amount)
+        OS-&gt;&gt;DB: INSERT order_status_history (first entry: pending)
+        OS-&gt;&gt;DB: DELETE cart_items
+        OS-&gt;&gt;DB: COMMIT
+        OS--&gt;&gt;P: order number
+        P--&gt;&gt;C: redirect to order confirmation page
+    end</pre>
+    </section>
+    <section class="diagram">
+      <header>
+        <h2>3. Order status state machine</h2>
+        <span class="src">from docs/02-architecture.md</span>
+        <button type="button" data-download="d3">Download SVG</button>
+      </header>
+      <pre class="mermaid" id="d3">stateDiagram-v2
+    [*] --&gt; pending : order placed
+    pending --&gt; confirmed : admin confirms
+    pending --&gt; cancelled : customer or admin cancels
+    confirmed --&gt; processing : admin
+    confirmed --&gt; cancelled : admin cancels
+    processing --&gt; ready_for_delivery : admin
+    processing --&gt; cancelled : admin cancels
+    ready_for_delivery --&gt; delivered : admin
+    delivered --&gt; [*]
+    cancelled --&gt; [*]
+    note right of cancelled
+        Stock restored once,
+        inventory movement recorded
+    end note</pre>
+    </section>
+    <section class="diagram">
+      <header>
+        <h2>4. Payment status state machine</h2>
+        <span class="src">from docs/02-architecture.md</span>
+        <button type="button" data-download="d4">Download SVG</button>
+      </header>
+      <pre class="mermaid" id="d4">stateDiagram-v2
+    [*] --&gt; pending : order placed
+    pending --&gt; awaiting_verification : customer submits bank reference
+    pending --&gt; paid : admin records payment (e.g. COD collected)
+    awaiting_verification --&gt; paid : admin verifies transfer
+    awaiting_verification --&gt; failed : admin rejects transfer
+    pending --&gt; failed : admin
+    failed --&gt; awaiting_verification : customer resubmits reference
+    paid --&gt; refunded : admin records refund
+    refunded --&gt; [*]</pre>
+    </section>
+    <section class="diagram">
+      <header>
+        <h2>5. Entity-relationship diagram</h2>
+        <span class="src">from docs/03-database-design.md</span>
+        <button type="button" data-download="d5">Download SVG</button>
+      </header>
+      <pre class="mermaid" id="d5">erDiagram
+    USERS ||--o{ CUSTOMER_ADDRESSES : &quot;saves&quot;
+    USERS ||--o| CARTS : &quot;owns&quot;
+    CARTS ||--o{ CART_ITEMS : &quot;contains&quot;
+    PRODUCTS ||--o{ CART_ITEMS : &quot;added as&quot;
+    CATEGORIES |o--o{ CATEGORIES : &quot;parent of&quot;
+    CATEGORIES ||--o{ PRODUCTS : &quot;groups&quot;
+    PRODUCTS ||--o{ PRODUCT_IMAGES : &quot;has&quot;
+    USERS ||--o{ ORDERS : &quot;places&quot;
+    ORDERS ||--|{ ORDER_ITEMS : &quot;contains&quot;
+    PRODUCTS |o--o{ ORDER_ITEMS : &quot;snapshot of&quot;
+    ORDERS ||--|| PAYMENTS : &quot;paid by&quot;
+    ORDERS ||--|{ ORDER_STATUS_HISTORY : &quot;tracked by&quot;
+    USERS |o--o{ ORDER_STATUS_HISTORY : &quot;changes&quot;
+    USERS |o--o{ PAYMENTS : &quot;records&quot;
+    PRODUCTS ||--o{ INVENTORY_MOVEMENTS : &quot;stock ledger&quot;
+    ORDERS |o--o{ INVENTORY_MOVEMENTS : &quot;causes&quot;
+    USERS |o--o{ INVENTORY_MOVEMENTS : &quot;made by&quot;
+    USERS |o--o{ ADMIN_ACTIVITY_LOG : &quot;performs&quot;
+
+    USERS {
+        int id PK
+        enum role &quot;customer or admin&quot;
+        varchar full_name
+        varchar email UK
+        varchar phone
+        varchar password_hash
+        tinyint is_active
+        datetime last_login_at
+        datetime created_at
+        datetime updated_at
+    }
+    LOGIN_ATTEMPTS {
+        bigint id PK
+        varchar email
+        varchar ip_address
+        tinyint succeeded
+        datetime attempted_at
+    }
+    CUSTOMER_ADDRESSES {
+        int id PK
+        int user_id FK
+        varchar label
+        varchar recipient_name
+        varchar phone
+        varchar address_line1
+        varchar address_line2
+        varchar city
+        varchar district
+        varchar postal_code
+        tinyint is_default
+    }
+    CATEGORIES {
+        int id PK
+        int parent_id FK &quot;NULL for top level&quot;
+        varchar name
+        varchar slug UK
+        varchar description
+        smallint sort_order
+        tinyint is_active
+    }
+    PRODUCTS {
+        int id PK
+        int category_id FK
+        varchar sku UK
+        varchar name
+        varchar slug UK
+        varchar short_description
+        text description
+        decimal price &quot;LKR, 10,2&quot;
+        int stock_quantity &quot;CHECK &gt;= 0&quot;
+        int low_stock_threshold
+        tinyint is_featured
+        tinyint is_active
+        datetime created_at
+        datetime updated_at
+    }
+    PRODUCT_IMAGES {
+        int id PK
+        int product_id FK
+        varchar file_name UK &quot;random 32 hex + ext&quot;
+        varchar alt_text
+        smallint sort_order
+        tinyint is_primary
+    }
+    CARTS {
+        int id PK
+        int user_id FK, UK
+    }
+    CART_ITEMS {
+        int id PK
+        int cart_id FK
+        int product_id FK
+        smallint quantity &quot;1 to 99&quot;
+    }
+    ORDERS {
+        int id PK
+        varchar order_number UK
+        int user_id FK
+        enum status
+        varchar customer_name &quot;snapshot&quot;
+        varchar customer_email &quot;snapshot&quot;
+        varchar customer_phone &quot;snapshot&quot;
+        varchar recipient_name &quot;snapshot&quot;
+        varchar recipient_phone &quot;snapshot&quot;
+        varchar address_line1 &quot;snapshot&quot;
+        varchar city &quot;snapshot&quot;
+        varchar district &quot;snapshot&quot;
+        varchar delivery_notes
+        decimal subtotal
+        decimal delivery_fee
+        decimal discount_amount
+        decimal total_amount &quot;CHECK = sub + fee - disc&quot;
+        datetime created_at
+    }
+    ORDER_ITEMS {
+        int id PK
+        int order_id FK
+        int product_id FK &quot;nullable&quot;
+        varchar product_name &quot;snapshot&quot;
+        varchar product_sku &quot;snapshot&quot;
+        decimal unit_price &quot;snapshot&quot;
+        smallint quantity
+        decimal line_total &quot;CHECK = price x qty&quot;
+    }
+    ORDER_STATUS_HISTORY {
+        bigint id PK
+        int order_id FK
+        enum from_status
+        enum to_status
+        int changed_by FK
+        varchar note
+        datetime created_at
+    }
+    PAYMENTS {
+        int id PK
+        int order_id FK, UK
+        enum method &quot;cod or bank_transfer&quot;
+        enum status
+        decimal amount
+        varchar reference
+        datetime paid_at
+        datetime refunded_at
+        int recorded_by FK
+    }
+    INVENTORY_MOVEMENTS {
+        bigint id PK
+        int product_id FK
+        int quantity_change &quot;+ in, - out&quot;
+        int stock_after
+        enum reason
+        int order_id FK
+        int user_id FK
+        datetime created_at
+    }
+    ADMIN_ACTIVITY_LOG {
+        bigint id PK
+        int admin_id FK
+        varchar action
+        varchar entity_type
+        int entity_id
+        varchar details
+        varchar ip_address
+        datetime created_at
+    }
+    SETTINGS {
+        varchar setting_key PK
+        varchar setting_value
+        enum value_type
+        varchar label
+    }</pre>
+    </section>
+</main>
+<script type="module">
+  try {
+    const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
+    mermaid.initialize({ startOnLoad: false, theme: 'base', securityLevel: 'strict',
+      themeVariables: { primaryColor: '#efe6f8', primaryBorderColor: '#5b2a86', primaryTextColor: '#1f1630', lineColor: '#5b2a86', fontFamily: 'system-ui, Segoe UI, sans-serif' } });
+    await mermaid.run({ querySelector: '.mermaid' });
+  } catch (err) {
+    document.getElementById('offline').style.display = 'block';
+    console.error(err);
+  }
+  document.querySelectorAll('[data-download]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const svg = document.querySelector('#' + btn.dataset.download + ' svg');
+      if (!svg) { alert('Diagram not drawn yet.'); return; }
+      const blob = new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'giftaura-' + btn.dataset.download + '.svg';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+  });
+</script>
+</body>
+</html>

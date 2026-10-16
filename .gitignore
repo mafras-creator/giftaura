@@ -1,0 +1,19 @@
+# Real configuration with database password - NEVER commit
+config/config.php
+
+# Runtime files
+storage/logs/*
+!storage/logs/.gitkeep
+public/uploads/products/*
+!public/uploads/products/.gitkeep
+
+# Editor and Windows files
+.vscode/
+Thumbs.db
+desktop.ini
+*.log
+*.tmp
+
+# Database exports / backups may contain customer data
+*.sql.bak
+backups/

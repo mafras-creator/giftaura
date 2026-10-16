@@ -1,0 +1,20 @@
+# GiftAura - project root
+# Every request for http://localhost/giftaura/... is served from public/.
+# Folders such as app/, config/ and sql/ therefore cannot be reached,
+# and each of them also has its own "Require all denied" as a second lock.
+
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # http://localhost/giftaura/  ->  public/
+    RewriteRule ^$ public/ [L]
+    # Anything not already inside public/ is looked up inside public/
+    RewriteCond %{REQUEST_URI} !/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Never serve hidden files (.git, .env, .htaccess, ...)
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>

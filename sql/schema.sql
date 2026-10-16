@@ -1,0 +1,408 @@
+-- =====================================================================
+-- GiftAura E-Commerce Web System
+-- File   : sql/schema.sql
+-- Purpose: Complete database structure (tables, keys, constraints).
+-- Target : MariaDB 10.4.32 (XAMPP), InnoDB, utf8mb4
+-- ---------------------------------------------------------------------
+-- HOW TO RUN (phpMyAdmin):
+--   1. Run sql/00_create_database_and_user.sql first (once).
+--   2. Click giftaura_db in the left panel -> Import -> choose this file -> Import.
+--   3. Then import sql/seed.sql the same way.
+--
+-- WARNING: this file DROPS and re-creates every GiftAura table.
+--          Re-importing it deletes all GiftAura data (orders, users, ...).
+--          It never touches any other database.
+--
+-- Design notes
+--   * Money is DECIMAL(10,2), in Sri Lankan rupees (LKR). Never FLOAT.
+--   * Dates are DATETIME. The application sets the session time zone to
+--     +05:30 (Asia/Colombo) so CURRENT_TIMESTAMP is Sri Lankan time.
+--   * Products, categories and users are deactivated, not deleted, so
+--     past orders, payments and stock history always stay intact.
+--   * order_items keeps a snapshot of name, SKU, price and quantity so
+--     editing or removing a product never changes a past order.
+--   * CHECK constraints are enforced by MariaDB 10.2+ and act as a last
+--     line of defence behind the PHP validation.
+-- =====================================================================
+
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+
+DROP TABLE IF EXISTS admin_activity_log;
+DROP TABLE IF EXISTS inventory_movements;
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS order_status_history;
+DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS cart_items;
+DROP TABLE IF EXISTS carts;
+DROP TABLE IF EXISTS product_images;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS customer_addresses;
+DROP TABLE IF EXISTS login_attempts;
+DROP TABLE IF EXISTS settings;
+DROP TABLE IF EXISTS users;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- ---------------------------------------------------------------------
+-- 1. users : customers and administrators (one table, role column)
+-- ---------------------------------------------------------------------
+CREATE TABLE users (
+    id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    role            ENUM('customer','admin') NOT NULL DEFAULT 'customer',
+    full_name       VARCHAR(100)     NOT NULL,
+    email           VARCHAR(190)     NOT NULL,
+    phone           VARCHAR(20)      NULL,
+    password_hash   VARCHAR(255)     NOT NULL COMMENT 'password_hash() output, never plaintext',
+    is_active       TINYINT(1)       NOT NULL DEFAULT 1,
+    last_login_at   DATETIME         NULL,
+    created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_users_email (email),
+    KEY idx_users_role_active (role, is_active),
+    CONSTRAINT chk_users_active CHECK (is_active IN (0,1)),
+    CONSTRAINT chk_users_name   CHECK (CHAR_LENGTH(TRIM(full_name)) > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 2. login_attempts : supports login rate limiting (by email and by IP)
+-- ---------------------------------------------------------------------
+CREATE TABLE login_attempts (
+    id              BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    email           VARCHAR(190)     NOT NULL,
+    ip_address      VARCHAR(45)      NOT NULL COMMENT 'IPv4 or IPv6',
+    succeeded       TINYINT(1)       NOT NULL DEFAULT 0,
+    attempted_at    DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_login_email_time (email, attempted_at),
+    KEY idx_login_ip_time (ip_address, attempted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 3. customer_addresses : saved delivery addresses (address book)
+-- ---------------------------------------------------------------------
+CREATE TABLE customer_addresses (
+    id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    user_id         INT UNSIGNED     NOT NULL,
+    label           VARCHAR(50)      NOT NULL DEFAULT 'Home',
+    recipient_name  VARCHAR(100)     NOT NULL,
+    phone           VARCHAR(20)      NOT NULL,
+    address_line1   VARCHAR(150)     NOT NULL,
+    address_line2   VARCHAR(150)     NULL,
+    city            VARCHAR(80)      NOT NULL,
+    district        VARCHAR(50)      NOT NULL,
+    postal_code     VARCHAR(10)      NULL,
+    is_default      TINYINT(1)       NOT NULL DEFAULT 0 COMMENT 'One default per customer, enforced in PHP inside a transaction',
+    created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_address_user (user_id, is_default),
+    CONSTRAINT fk_address_user FOREIGN KEY (user_id) REFERENCES users (id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT chk_address_default CHECK (is_default IN (0,1))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 4. categories : self-referencing, so subcategories can be added later
+-- ---------------------------------------------------------------------
+CREATE TABLE categories (
+    id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    parent_id       INT UNSIGNED     NULL COMMENT 'NULL = top-level; PHP prevents loops (a category cannot be its own ancestor)',
+    name            VARCHAR(100)     NOT NULL,
+    slug            VARCHAR(120)     NOT NULL,
+    description     VARCHAR(500)     NULL,
+    sort_order      SMALLINT         NOT NULL DEFAULT 0,
+    is_active       TINYINT(1)       NOT NULL DEFAULT 1,
+    created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_categories_slug (slug),
+    KEY idx_categories_parent (parent_id, is_active, sort_order),
+    CONSTRAINT fk_categories_parent FOREIGN KEY (parent_id) REFERENCES categories (id)
+        ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT chk_categories_active CHECK (is_active IN (0,1)),
+    CONSTRAINT chk_categories_slug CHECK (slug REGEXP '^[a-z0-9]+(-[a-z0-9]+)*$')
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 5. products
+-- ---------------------------------------------------------------------
+CREATE TABLE products (
+    id                  INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    category_id         INT UNSIGNED     NOT NULL,
+    sku                 VARCHAR(40)      NULL COMMENT 'Stock-keeping unit, optional but unique',
+    name                VARCHAR(150)     NOT NULL,
+    slug                VARCHAR(170)     NOT NULL,
+    short_description   VARCHAR(255)     NULL,
+    description         TEXT             NULL,
+    price               DECIMAL(10,2)    NOT NULL COMMENT 'Selling price in LKR',
+    stock_quantity      INT              NOT NULL DEFAULT 0,
+    low_stock_threshold INT              NOT NULL DEFAULT 5,
+    is_featured         TINYINT(1)       NOT NULL DEFAULT 0,
+    is_active           TINYINT(1)       NOT NULL DEFAULT 1,
+    created_at          DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_products_slug (slug),
+    UNIQUE KEY uq_products_sku (sku),
+    KEY idx_products_category (category_id, is_active),
+    KEY idx_products_active_featured (is_active, is_featured),
+    KEY idx_products_active_created (is_active, created_at),
+    KEY idx_products_price (price),
+    FULLTEXT KEY ft_products_search (name, short_description, description),
+    CONSTRAINT fk_products_category FOREIGN KEY (category_id) REFERENCES categories (id)
+        ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT chk_products_price     CHECK (price >= 0),
+    CONSTRAINT chk_products_stock     CHECK (stock_quantity >= 0),
+    CONSTRAINT chk_products_threshold CHECK (low_stock_threshold >= 0),
+    CONSTRAINT chk_products_featured  CHECK (is_featured IN (0,1)),
+    CONSTRAINT chk_products_active    CHECK (is_active IN (0,1)),
+    CONSTRAINT chk_products_slug      CHECK (slug REGEXP '^[a-z0-9]+(-[a-z0-9]+)*$')
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 6. product_images : files live in public/uploads/products/,
+--    the database stores only the generated file name.
+-- ---------------------------------------------------------------------
+CREATE TABLE product_images (
+    id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    product_id      INT UNSIGNED     NOT NULL,
+    file_name       VARCHAR(100)     NOT NULL COMMENT 'Random name generated by the server',
+    alt_text        VARCHAR(150)     NULL,
+    sort_order      SMALLINT         NOT NULL DEFAULT 0,
+    is_primary      TINYINT(1)       NOT NULL DEFAULT 0 COMMENT 'One primary per product, enforced in PHP inside a transaction',
+    created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_product_images_file (file_name),
+    KEY idx_product_images_product (product_id, sort_order),
+    CONSTRAINT fk_product_images_product FOREIGN KEY (product_id) REFERENCES products (id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT chk_product_images_primary CHECK (is_primary IN (0,1)),
+    CONSTRAINT chk_product_images_name CHECK (file_name REGEXP '^[a-f0-9]{32}\\.(jpg|png|webp)$')
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 7. carts / cart_items : persistent cart for logged-in customers.
+--    Guests keep their cart in the PHP session; it is merged into this
+--    table when they log in. Prices are NOT stored here: totals are
+--    always recalculated from products.price.
+-- ---------------------------------------------------------------------
+CREATE TABLE carts (
+    id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    user_id         INT UNSIGNED     NOT NULL,
+    created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_carts_user (user_id),
+    CONSTRAINT fk_carts_user FOREIGN KEY (user_id) REFERENCES users (id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE cart_items (
+    id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    cart_id         INT UNSIGNED     NOT NULL,
+    product_id      INT UNSIGNED     NOT NULL,
+    quantity        SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+    added_at        DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_cart_items_product (cart_id, product_id),
+    KEY idx_cart_items_product (product_id),
+    CONSTRAINT fk_cart_items_cart FOREIGN KEY (cart_id) REFERENCES carts (id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_cart_items_product FOREIGN KEY (product_id) REFERENCES products (id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT chk_cart_items_qty CHECK (quantity BETWEEN 1 AND 99)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 8. orders : one row per order, with a snapshot of the contact and
+--    delivery details at the time of ordering.
+--    Status workflow (enforced in PHP, see docs/02-architecture.md):
+--      pending -> confirmed -> processing -> ready_for_delivery -> delivered
+--      pending / confirmed / processing -> cancelled (stock restored)
+-- ---------------------------------------------------------------------
+CREATE TABLE orders (
+    id                  INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    order_number        VARCHAR(20)      NOT NULL COMMENT 'Customer-facing reference, e.g. GA261016-7K3M9Q',
+    user_id             INT UNSIGNED     NOT NULL,
+    status              ENUM('pending','confirmed','processing','ready_for_delivery','delivered','cancelled')
+                                         NOT NULL DEFAULT 'pending',
+    -- Contact snapshot
+    customer_name       VARCHAR(100)     NOT NULL,
+    customer_email      VARCHAR(190)     NOT NULL,
+    customer_phone      VARCHAR(20)      NOT NULL,
+    -- Delivery snapshot
+    recipient_name      VARCHAR(100)     NOT NULL,
+    recipient_phone     VARCHAR(20)      NOT NULL,
+    address_line1       VARCHAR(150)     NOT NULL,
+    address_line2       VARCHAR(150)     NULL,
+    city                VARCHAR(80)      NOT NULL,
+    district            VARCHAR(50)      NOT NULL,
+    postal_code         VARCHAR(10)      NULL,
+    delivery_notes      VARCHAR(500)     NULL COMMENT 'e.g. gift message or delivery instructions',
+    -- Money (all calculated on the server from database prices)
+    subtotal            DECIMAL(10,2)    NOT NULL,
+    delivery_fee        DECIMAL(10,2)    NOT NULL DEFAULT 0.00,
+    discount_amount     DECIMAL(10,2)    NOT NULL DEFAULT 0.00,
+    total_amount        DECIMAL(10,2)    NOT NULL,
+    created_at          DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Order placed at',
+    updated_at          DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_orders_number (order_number),
+    KEY idx_orders_user_created (user_id, created_at),
+    KEY idx_orders_status_created (status, created_at),
+    KEY idx_orders_created (created_at),
+    CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id)
+        ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT chk_orders_subtotal CHECK (subtotal >= 0),
+    CONSTRAINT chk_orders_delivery CHECK (delivery_fee >= 0),
+    CONSTRAINT chk_orders_discount CHECK (discount_amount >= 0 AND discount_amount <= subtotal),
+    CONSTRAINT chk_orders_total    CHECK (total_amount = subtotal + delivery_fee - discount_amount)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 9. order_items : historical snapshot of each purchased product
+-- ---------------------------------------------------------------------
+CREATE TABLE order_items (
+    id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    order_id        INT UNSIGNED     NOT NULL,
+    product_id      INT UNSIGNED     NULL COMMENT 'Kept for links/reports; snapshot below is authoritative',
+    product_name    VARCHAR(150)     NOT NULL,
+    product_sku     VARCHAR(40)      NULL,
+    unit_price      DECIMAL(10,2)    NOT NULL,
+    quantity        SMALLINT UNSIGNED NOT NULL,
+    line_total      DECIMAL(10,2)    NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_order_items_product (order_id, product_id),
+    KEY idx_order_items_product (product_id),
+    CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders (id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_order_items_product FOREIGN KEY (product_id) REFERENCES products (id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT chk_order_items_price CHECK (unit_price >= 0),
+    CONSTRAINT chk_order_items_qty   CHECK (quantity >= 1),
+    CONSTRAINT chk_order_items_line  CHECK (line_total = unit_price * quantity)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 10. order_status_history : every status change with who and when.
+--     This is the timestamp record for the order lifecycle and the
+--     "order activity" view for administrators.
+-- ---------------------------------------------------------------------
+CREATE TABLE order_status_history (
+    id              BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    order_id        INT UNSIGNED     NOT NULL,
+    from_status     ENUM('pending','confirmed','processing','ready_for_delivery','delivered','cancelled') NULL
+                                     COMMENT 'NULL for the first entry (order placed)',
+    to_status       ENUM('pending','confirmed','processing','ready_for_delivery','delivered','cancelled') NOT NULL,
+    changed_by      INT UNSIGNED     NULL COMMENT 'Admin or customer who made the change',
+    note            VARCHAR(500)     NULL COMMENT 'e.g. cancellation reason',
+    created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_status_history_order (order_id, created_at),
+    CONSTRAINT fk_status_history_order FOREIGN KEY (order_id) REFERENCES orders (id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_status_history_user FOREIGN KEY (changed_by) REFERENCES users (id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT chk_status_history_change CHECK (from_status IS NULL OR from_status <> to_status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 11. payments : one payment record per order.
+--     No real online gateway is integrated. Methods are Cash on
+--     Delivery and manual bank transfer verified by an administrator.
+-- ---------------------------------------------------------------------
+CREATE TABLE payments (
+    id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    order_id        INT UNSIGNED     NOT NULL,
+    method          ENUM('cod','bank_transfer') NOT NULL,
+    status          ENUM('pending','awaiting_verification','paid','failed','refunded')
+                                     NOT NULL DEFAULT 'pending',
+    amount          DECIMAL(10,2)    NOT NULL COMMENT 'Equals orders.total_amount when created',
+    reference       VARCHAR(100)     NULL COMMENT 'Bank transfer reference given by the customer',
+    paid_at         DATETIME         NULL,
+    refunded_at     DATETIME         NULL,
+    recorded_by     INT UNSIGNED     NULL COMMENT 'Admin who last changed the payment status',
+    admin_note      VARCHAR(500)     NULL,
+    created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_payments_order (order_id),
+    KEY idx_payments_status (status),
+    KEY idx_payments_paid_at (paid_at),
+    CONSTRAINT fk_payments_order FOREIGN KEY (order_id) REFERENCES orders (id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_payments_admin FOREIGN KEY (recorded_by) REFERENCES users (id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT chk_payments_amount   CHECK (amount >= 0),
+    CONSTRAINT chk_payments_paid     CHECK (status NOT IN ('paid','refunded') OR paid_at IS NOT NULL),
+    CONSTRAINT chk_payments_refunded CHECK (status <> 'refunded' OR refunded_at IS NOT NULL)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 12. inventory_movements : stock ledger. Every change to
+--     products.stock_quantity is written here in the same transaction.
+-- ---------------------------------------------------------------------
+CREATE TABLE inventory_movements (
+    id              BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    product_id      INT UNSIGNED     NOT NULL,
+    quantity_change INT              NOT NULL COMMENT 'Negative = stock out, positive = stock in',
+    stock_after     INT              NOT NULL,
+    reason          ENUM('initial_stock','restock','order_placed','order_cancelled','manual_adjustment')
+                                     NOT NULL,
+    order_id        INT UNSIGNED     NULL,
+    user_id         INT UNSIGNED     NULL COMMENT 'Admin or customer whose action caused it',
+    note            VARCHAR(255)     NULL,
+    created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_inventory_product_time (product_id, created_at),
+    KEY idx_inventory_order (order_id),
+    KEY idx_inventory_time (created_at),
+    CONSTRAINT fk_inventory_product FOREIGN KEY (product_id) REFERENCES products (id)
+        ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_inventory_order FOREIGN KEY (order_id) REFERENCES orders (id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT fk_inventory_user FOREIGN KEY (user_id) REFERENCES users (id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT chk_inventory_change CHECK (quantity_change <> 0),
+    CONSTRAINT chk_inventory_after  CHECK (stock_after >= 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 13. admin_activity_log : audit trail of administrator actions.
+--     Never stores passwords or payment secrets.
+-- ---------------------------------------------------------------------
+CREATE TABLE admin_activity_log (
+    id              BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    admin_id        INT UNSIGNED     NULL,
+    action          VARCHAR(50)      NOT NULL COMMENT 'e.g. product.update, order.status, payment.verify',
+    entity_type     VARCHAR(50)      NOT NULL COMMENT 'e.g. product, category, order',
+    entity_id       INT UNSIGNED     NULL,
+    details         VARCHAR(500)     NULL,
+    ip_address      VARCHAR(45)      NULL,
+    created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_activity_admin_time (admin_id, created_at),
+    KEY idx_activity_entity (entity_type, entity_id),
+    KEY idx_activity_time (created_at),
+    CONSTRAINT fk_activity_admin FOREIGN KEY (admin_id) REFERENCES users (id)
+        ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 14. settings : editable store configuration (contact details,
+--     delivery charges, bank details). Edited from the admin panel.
+-- ---------------------------------------------------------------------
+CREATE TABLE settings (
+    setting_key     VARCHAR(60)      NOT NULL,
+    setting_value   VARCHAR(1000)    NOT NULL DEFAULT '',
+    value_type      ENUM('text','money','integer','boolean','email','multiline') NOT NULL DEFAULT 'text',
+    label           VARCHAR(100)     NOT NULL,
+    description     VARCHAR(255)     NULL,
+    updated_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (setting_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

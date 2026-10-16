@@ -1,0 +1,19 @@
+# GiftAura - uploaded files
+# 1. No directory listings and no script execution of any kind.
+Options -Indexes -ExecCGI
+<IfModule php_module>
+    php_flag engine off
+</IfModule>
+RemoveHandler .php .phtml .phar .php5 .php7 .php8
+RemoveType .php .phtml .phar .php5 .php7 .php8
+
+# 2. Deny everything, then allow only the image types the uploader creates.
+Require all denied
+<FilesMatch "\.(jpg|png|webp)$">
+    Require all granted
+</FilesMatch>
+
+# 3. Tell browsers not to guess the file type.
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>
