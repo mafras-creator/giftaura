@@ -53,6 +53,21 @@ $main = $images[0] ?? null;
 
             <?php if ($status['key'] === 'out_of_stock'): ?>
                 <div class="alert alert--info"><span>This item is currently out of stock. Please check again soon.</span></div>
+            <?php else: ?>
+                <?php $maxQty = min(CartService::maxPerItem(), (int) $product['stock_quantity']); ?>
+                <form method="post" action="<?= e(url('cart.php')) ?>" class="add-to-cart">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="add">
+                    <input type="hidden" name="product_id" value="<?= e((string) $product['id']) ?>">
+                    <input type="hidden" name="return" value="<?= e(url('product.php', ['slug' => $product['slug']])) ?>">
+                    <label class="sr-only" for="quantity">Quantity</label>
+                    <div class="stepper">
+                        <button type="button" class="stepper__btn" data-step="-1" aria-label="Decrease quantity">&minus;</button>
+                        <input type="number" id="quantity" name="quantity" value="1" min="1" max="<?= e((string) $maxQty) ?>" inputmode="numeric">
+                        <button type="button" class="stepper__btn" data-step="1" aria-label="Increase quantity">+</button>
+                    </div>
+                    <button type="submit" class="btn btn--primary add-to-cart__button">Add to cart</button>
+                </form>
             <?php endif; ?>
 
             <dl class="product-facts">

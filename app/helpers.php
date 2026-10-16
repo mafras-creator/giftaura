@@ -185,6 +185,21 @@ function stock_status(array $product): array
     return ['key' => 'in_stock', 'label' => 'In stock'];
 }
 
+/** Coloured badge for an order status. */
+function order_status_badge(string $status): string
+{
+    $label = OrderService::STATUSES[$status] ?? $status;
+    return '<span class="badge badge--status-' . e($status) . '">' . e($label) . '</span>';
+}
+
+/** Coloured badge for a payment status. */
+function payment_status_badge(?string $status): string
+{
+    $status = $status ?? 'pending';
+    $label = PaymentService::STATUSES[$status] ?? $status;
+    return '<span class="badge badge--pay-' . e($status) . '">' . e($label) . '</span>';
+}
+
 /** Error message under a form field (escaped). Empty string when no error. */
 function field_error(array $errors, string $field): string
 {

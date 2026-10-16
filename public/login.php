@@ -25,6 +25,7 @@ if (is_post()) {
         $result = Auth::attempt($email, $password);
         if ($result === Auth::OK) {
             $user = current_user();
+            CartService::mergeSessionCart($user['id']);
             Flash::add('success', 'Welcome back, ' . $user['full_name'] . '.');
             $fallback = $user['role'] === 'admin' ? 'admin/' : 'account/';
             header('Location: ' . safe_next($next, $fallback), true, 303);

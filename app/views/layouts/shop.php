@@ -10,6 +10,7 @@ $phone     = setting('store_phone');
 $email     = setting('store_email');
 $address   = setting('store_address');
 $hours     = setting('store_hours');
+$cartCount = CartService::count();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -53,6 +54,13 @@ $hours     = setting('store_hours');
                 </button>
             </form>
             <ul class="site-nav__account">
+                <li>
+                    <a class="cart-link<?= nav_active('cart.php') ?>" href="<?= e(url('cart.php')) ?>">
+                        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M6 6 5 3H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="9" cy="20" r="1.5" fill="currentColor"/><circle cx="18" cy="20" r="1.5" fill="currentColor"/></svg>
+                        <span>Cart</span>
+                        <?php if ($cartCount > 0): ?><span class="cart-link__count"><?= e((string) $cartCount) ?></span><span class="sr-only"> items</span><?php endif; ?>
+                    </a>
+                </li>
                 <?php if ($user === null): ?>
                     <li><a class="site-nav__link<?= nav_active('login.php') ?>" href="<?= e(url('login.php')) ?>">Log in</a></li>
                     <li><a class="btn btn--primary btn--small" href="<?= e(url('register.php')) ?>">Create account</a></li>
@@ -111,9 +119,11 @@ $hours     = setting('store_hours');
                 <?php if ($user === null): ?>
                     <li><a href="<?= e(url('login.php')) ?>">Log in</a></li>
                     <li><a href="<?= e(url('register.php')) ?>">Create an account</a></li>
-                <?php else: ?>
+                <?php endif; ?>
+                <li><a href="<?= e(url('track-order.php')) ?>">Track your order</a></li>
+                <?php if ($user !== null): ?>
+                    <li><a href="<?= e(url('account/orders.php')) ?>">My orders</a></li>
                     <li><a href="<?= e(url('account/')) ?>">My profile</a></li>
-                    <li><a href="<?= e(url('account/password.php')) ?>">Change password</a></li>
                 <?php endif; ?>
             </ul>
         </div>

@@ -4,7 +4,7 @@
 |---|---|
 | Project | E-Commerce Web System for GiftAura (MIT final-year Software Development Project, South Eastern University of Sri Lanka) |
 | Document | Functional and non-functional requirements, business rules, scope |
-| Version | 1.2 — updated at end of Phase 4 |
+| Version | 1.3 — updated at end of Phase 5 |
 | Stack | HTML5, CSS3, vanilla JavaScript, PHP 8.2, MariaDB 10.4, Apache (XAMPP) |
 
 **Status key:** `Planned` → `Built` → `Tested` (with the test case ID that proved it). This table is updated at the end of every phase. Nothing is marked `Tested` unless a test was actually executed.
@@ -37,19 +37,19 @@
 | FR-09 | Register a customer account (name, email, phone, password with confirmation). | 3 | Built |
 | FR-10 | Log in and log out. | 3 | Built |
 | FR-11 | View and edit profile (name, phone); change password (requires current password). | 3 | Built |
-| FR-12 | Manage saved delivery addresses, with one default address. | 5 | Planned |
-| FR-13 | Add a product to the cart from the listing and detail pages (guest or customer). | 5 | Planned |
-| FR-14 | Change cart quantities and remove items; cart shows live subtotal from current database prices. | 5 | Planned |
-| FR-15 | Keep a logged-in customer's cart in the database; merge the guest session cart on login. | 5 | Planned |
-| FR-16 | Warn in the cart when an item's stock has fallen below the cart quantity or the product was deactivated. | 5 | Planned |
-| FR-17 | Checkout requires login; collects contact details, delivery address (new or saved), delivery notes and payment method. | 5 | Planned |
-| FR-18 | Show subtotal, delivery charge, discount (0 in this version) and total before the order is placed. | 5 | Planned |
-| FR-19 | Place an order and receive a unique order reference (e.g. `GA261016-7K3M9Q`) on a confirmation page. | 5 | Planned |
-| FR-20 | For bank transfer, show the store's bank details and let the customer submit a transfer reference. | 5 | Planned |
-| FR-21 | View own order history (reference, date, status, payment status, total). | 5 | Planned |
-| FR-22 | View own order details: items, quantities, prices, delivery charge, total, payment method and status, and a status timeline. | 5 | Planned |
-| FR-23 | Cancel own order while it is still `pending`. | 5 | Planned |
-| FR-24 | Track an order on the Track Order page (own orders only when logged in; guests can look up by order reference + email). | 5 | Planned |
+| FR-12 | Manage saved delivery addresses, with one default address. | 5 | Built |
+| FR-13 | Add a product to the cart from the listing and detail pages (guest or customer). | 5 | Built |
+| FR-14 | Change cart quantities and remove items; cart shows live subtotal from current database prices. | 5 | Built |
+| FR-15 | Keep a logged-in customer's cart in the database; merge the guest session cart on login. | 5 | Built |
+| FR-16 | Warn in the cart when an item's stock has fallen below the cart quantity or the product was deactivated. | 5 | Built |
+| FR-17 | Checkout requires login; collects contact details, delivery address (new or saved), delivery notes and payment method. | 5 | Built |
+| FR-18 | Show subtotal, delivery charge, discount (0 in this version) and total before the order is placed. | 5 | Built |
+| FR-19 | Place an order and receive a unique order reference (e.g. `GA261016-7K3M9Q`) on a confirmation page. | 5 | Built |
+| FR-20 | For bank transfer, show the store's bank details and let the customer submit a transfer reference. | 5 | Built |
+| FR-21 | View own order history (reference, date, status, payment status, total). | 5 | Built |
+| FR-22 | View own order details: items, quantities, prices, delivery charge, total, payment method and status, and a status timeline. | 5 | Built |
+| FR-23 | Cancel own order while it is still `pending`. | 5 | Built |
+| FR-24 | Track an order on the Track Order page (own orders only when logged in; guests can look up by order reference + email). | 5 | Built |
 | FR-25 | Contact / store information page and About page, using details from Settings (empty values are hidden, never invented). | 4 | Built |
 
 ## 3. Functional requirements — administrator side
@@ -92,9 +92,9 @@
 | NFR-09 | Security | Credentials in `config/config.php`, outside `public/`, excluded from Git; `app/`, `config/`, `sql/`, `storage/`, `docs/`, `scripts/` denied to browsers. | 3 | Built |
 | NFR-10 | Security | Customer-facing errors are generic; details go to `storage/logs/` (never passwords or payment data). | 3 | Built |
 | NFR-11 | Security | Application connects with a least-privilege MySQL user (`giftaura_app`: SELECT, INSERT, UPDATE, DELETE on `giftaura_db` only). | 2 | Planned |
-| NFR-12 | Integrity | Order placement, cancellation and stock adjustment run in database transactions with row locks; stock can never go below zero. | 5 | Planned |
-| NFR-13 | Integrity | Prices and totals are always recalculated on the server from database prices; browser-submitted prices are ignored. | 5 | Planned |
-| NFR-14 | Integrity | Order items store name, SKU, unit price and quantity as a snapshot. | 5 | Planned |
+| NFR-12 | Integrity | Order placement, cancellation and stock adjustment run in database transactions with row locks; stock can never go below zero. | 5 | Built |
+| NFR-13 | Integrity | Prices and totals are always recalculated on the server from database prices; browser-submitted prices are ignored. | 5 | Built |
+| NFR-14 | Integrity | Order items store name, SKU, unit price and quantity as a snapshot. | 5 | Built |
 | NFR-15 | Usability | Responsive layout for mobile (≥ 360 px), tablet and desktop. | 4–7 | Planned |
 | NFR-16 | Usability | Every page has clear empty, validation-error, success and error states; forms keep entered values after a validation error. | 4–7 | Planned |
 | NFR-17 | Usability | Purple-and-white GiftAura visual identity; consistent typography; accessible colour contrast and form labels. | 4–7 | Planned |

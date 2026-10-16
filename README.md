@@ -5,7 +5,7 @@ An online shop for the GiftAura gift store: flower bouquets, beauty creams and g
 
 **Stack:** HTML5 · CSS3 · vanilla JavaScript · PHP 8.2 · MariaDB 10.4 · Apache (XAMPP). No frameworks and no Composer packages.
 
-> **Project status: Phase 4 complete.** Database, configuration, login, registration, customer profile, password change, the protected admin dashboard, and the product catalogue (shop page, categories and subcategories, search, price and stock filters, sorting, pagination, product detail pages, About and Contact pages) work. The cart and checkout arrive in Phase 5. See `docs/01-requirements.md` for the status of each requirement.
+> **Project status: Phase 5 complete.** Customers can browse and search the catalogue, use a cart (kept in the database after login), check out with Cash on Delivery or bank transfer, receive an order reference, follow and cancel their orders, and manage saved addresses. Stock is reduced safely when an order is placed and restored when it is cancelled. The admin order, product and report screens arrive in Phase 6. See `docs/01-requirements.md` for the status of each requirement.
 
 ---
 

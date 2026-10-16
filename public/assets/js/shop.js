@@ -80,6 +80,31 @@
         });
     });
 
+    // Quantity stepper (+ / - buttons next to a number field)
+    document.querySelectorAll('.stepper').forEach(function (stepper) {
+        var input = stepper.querySelector('input');
+        stepper.querySelectorAll('[data-step]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var min = parseInt(input.min || '1', 10);
+                var max = parseInt(input.max || '99', 10);
+                var value = (parseInt(input.value, 10) || min) + parseInt(button.getAttribute('data-step'), 10);
+                input.value = Math.min(max, Math.max(min, value));
+            });
+        });
+    });
+
+    // Checkout: show the new-address fields only when "new address" is chosen
+    var newAddress = document.querySelector('[data-new-address]');
+    var choices = document.querySelectorAll('[data-address-choice]');
+    if (newAddress && choices.length) {
+        var syncAddress = function () {
+            var selected = document.querySelector('[data-address-choice]:checked');
+            newAddress.classList.toggle('is-hidden', !!selected && selected.value !== 'new');
+        };
+        choices.forEach(function (c) { c.addEventListener('change', syncAddress); });
+        syncAddress();
+    }
+
     // Re-enable buttons when the page is restored with the browser's Back button
     window.addEventListener('pageshow', function () {
         document.querySelectorAll('button[type="submit"]:disabled').forEach(function (b) { b.disabled = false; });

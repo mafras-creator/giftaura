@@ -47,7 +47,10 @@ final class RateLimiter
         );
         // Occasionally remove records older than 7 days to keep the table small.
         if (random_int(1, 50) === 1) {
-            Database::execute('DELETE FROM login_attempts WHERE attempted_at < NOW() - INTERVAL 7 DAY');
+            Database::execute(
+                'DELETE FROM login_attempts WHERE attempted_at < :cutoff',
+                ['cutoff' => date('Y-m-d H:i:s', time() - 7 * 86400)]
+            );
         }
     }
 }

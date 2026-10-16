@@ -26,6 +26,7 @@ if (is_post()) {
 
     if (isset($result['id'])) {
         Auth::loginById($result['id']);
+        CartService::mergeSessionCart($result['id']);
         Flash::add('success', 'Your account has been created. Welcome to GiftAura!');
         redirect('account/');
     }

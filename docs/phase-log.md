@@ -84,3 +84,52 @@ The real `seed.sql` was loaded into an SQLite copy of the schema (same tables an
 | T3-10 | Customer opens `admin/` | 403 | ✅ |
 | T3-11 | 6 wrong passwords | 5× "incorrect", then "Too many…"; correct password also refused while locked | ✅ |
 | T3-12 | Login with `next=https://evil.com` and upper-case email | logged in, redirected inside the site | ✅ |
+
+**Tested on the laptop:** Phase 4 committed to Git (`afd3f19`).
+
+## Phase 5 — Cart, checkout, orders, inventory (16 Oct 2026)
+
+### Files
+| Status | Files |
+|---|---|
+| New services | `CartService.php`, `AddressService.php`, `InventoryService.php`, `OrderService.php`, `PaymentService.php`, `CheckoutException.php` |
+| New pages | `public/cart.php`, `checkout.php`, `order-confirmation.php`, `track-order.php`, `account/orders.php`, `account/order.php`, `account/addresses.php` |
+| New views | `shop/cart.php`, `checkout.php`, `order-confirmation.php`, `track-order.php`, `account/orders.php`, `account/order.php`, `account/addresses.php`; partials `order-progress.php`, `bank-details.php` |
+| Changed | product card and product page (Add to cart), shop layout (cart link with count, Track order / My orders links), account menu, `login.php` and `register.php` (merge guest cart), `helpers.php` (status badges), `RateLimiter.php` (portable clean-up query), CSS and JS |
+
+### Design decisions
+- **Cart storage:** session for guests, `carts`/`cart_items` for customers, merged at login/registration. Only product ids and quantities are stored, never prices.
+- **Money:** calculated in whole cents (integers) and stored as `DECIMAL(10,2)`; no floating-point rounding.
+- **Order placement:** one transaction — products locked with `SELECT … FOR UPDATE`, availability re-checked, totals recalculated from locked prices, order + item snapshots + payment + status history inserted, stock reduced through `InventoryService` (conditional `UPDATE … WHERE stock_quantity + change >= 0` plus ledger row), cart emptied. Any failure rolls everything back.
+- **Cart fingerprint:** the checkout form carries a hash of items, quantities, prices and delivery fee. If anything changed before "Place order", the order is refused and the customer sees the new total — the customer always agrees to the exact amount charged.
+- **Cancellation:** customers may cancel only `pending` orders; the status is re-checked under a row lock; stock is restored once, with `order_cancelled` ledger rows.
+- **Order references** such as `GA261016-7K3M9Q` use random characters (no 0/O/1/I), so they cannot be guessed by counting.
+- **Tracking page:** reference + order email, sent by POST (email not in URL/logs), limited to 10 lookups per 10 minutes per session, shows status only (no address or phone).
+- **Payments:** Cash on Delivery and bank transfer only. Bank details come from Settings; if empty, the customer is told to contact the store — nothing is invented. A customer's bank reference moves the payment to "awaiting verification"; only an administrator (Phase 6) can mark it paid.
+- **Administrators cannot place orders** (prevents mixing staff and customer data).
+
+### Tests run by Claude (SQLite copy of schema + real seed data, real pages over HTTP; `e2e.sh`, run 3 times on a fresh database)
+**Result: 54 passed, 0 failed** (all three runs). Highlights:
+
+| ID | Test | Result |
+|---|---|---|
+| T5-01 | Guest adds 2 × Rs 4,500 → subtotal 9,000, delivery 400 (setting), total 9,400 | ✅ |
+| T5-02 | Adding 5 of a product with 3 in stock → limited to 3 with a message | ✅ |
+| T5-03 | Out-of-stock / inactive / invalid product id cannot be added | ✅ |
+| T5-04 | Cart POST without CSRF token → 419 | ✅ |
+| T5-05 | Guest checkout → login page, then registration merges the guest cart | ✅ |
+| T5-06 | Invalid checkout form → errors, no order created | ✅ |
+| T5-07 | Tampered fingerprint and fake `subtotal`/`total_amount` fields → refused, no order | ✅ |
+| T5-08 | Stock drops below cart quantity just before ordering → refused, stock unchanged | ✅ |
+| T5-09 | Valid COD order: totals 12,800 + 400 = 13,200; item snapshots; phones normalised; stock 12→10 and 3→2; two ledger rows; payment `cod/pending`; history `NULL→pending`; cart emptied; address saved as default | ✅ |
+| T5-10 | Another customer: order page, confirmation, cancel, edit/delete address → 404 / no change | ✅ |
+| T5-11 | Tracking: right email shows status; wrong email refused; address not shown | ✅ |
+| T5-12 | Customer cancels pending order → stock restored 10→12, 2→3; cancelling again does not restore twice | ✅ |
+| T5-13 | Bank-transfer order with saved address; bank details not invented; reference → `awaiting_verification`; `<script>` reference rejected | ✅ |
+| T5-14 | Free-delivery threshold 5,000 → delivery "Free" | ✅ |
+| T5-15 | **Race:** two customers order the last unit at the same moment → exactly one order, stock 0 (never negative) | ✅ |
+| T5-16 | Administrator cannot check out | ✅ |
+
+A test run also exposed a portability problem in the login-attempt clean-up query (it used MySQL-only date syntax and could interrupt a login under the test database). It was rewritten to use a date calculated in PHP, which works everywhere.
+
+**Note:** the row-lock (`FOR UPDATE`) behaviour itself is MariaDB-specific; the SQLite test database achieves the same protection by locking the whole database during a write. The race test should be repeated on the laptop in Phase 8.
