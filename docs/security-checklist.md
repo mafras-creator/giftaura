@@ -1,6 +1,6 @@
 # GiftAura — Security Checklist
 
-Version 1.0 — Phase 7. For each control: what it protects against, where it is implemented, and how to test it yourself.
+Version 1.1 — updated after Phase 8 testing. For each control: what it protects against, where it is implemented, and how to test it yourself.
 "Tested" refers to the automated tests in `tests/` (results in `docs/phase-log.md`) unless marked *manual*.
 Manual tests use Chrome on the development laptop; press **F12 → Network** to see response headers.
 
@@ -21,10 +21,10 @@ Manual tests use Chrome on the development laptop; press **F12 → Network** to 
 |---|---|---|---|---|---|
 | S1 | Cookie `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS, path `/giftaura/` | Cookie theft by scripts, cross-site requests | `Session::start()` | F12 → Application → Cookies → `GIFTAURA_SID` shows HttpOnly ✓ and SameSite Lax | Tested (T3-07) |
 | S2 | Strict mode, cookies only, no session ID in URLs | Session fixation | `Session::start()` | — | Built |
-| S3 | New session ID at login, registration, logout and password change | Session fixation / hijacking | `Auth::loginById()`, `Auth::logout()`, `UserService::changePassword()` | Note the cookie value, log in, the value changes | Built (manual) |
-| S4 | 30-minute idle timeout | Unattended computers | `Session::start()` (`security.session_idle_minutes`) | Log in, wait 31 minutes, refresh → logged out with a message | Built (manual) |
+| S3 | New session ID at login, registration, logout and password change | Session fixation / hijacking | `Auth::loginById()`, `Auth::logout()`, `UserService::changePassword()` | Note the cookie value, log in, the value changes | Built — not separately tested |
+| S4 | 30-minute idle timeout | Unattended computers | `Session::start()` (`security.session_idle_minutes`) | Log in, wait 31 minutes, refresh → logged out with a message | Built — not separately tested |
 | S5 | User reloaded from the database on every request; deactivated accounts are logged out immediately | Continued access after an account is disabled | `Auth::user()` | Admin deactivates a customer who is logged in → their next click goes to login | Tested (admin_e2e) |
-| S6 | `Cache-Control: no-store` on every page shown to a logged-in user | Private pages visible with the Back button after logout | `app/bootstrap.php` | Log in, open My orders, log out, press Back → page is reloaded and redirects to login | Built (manual) |
+| S6 | `Cache-Control: no-store` on every page shown to a logged-in user | Private pages visible with the Back button after logout | `app/bootstrap.php` | Log in, open My orders, log out, press Back → page is reloaded and redirects to login | Tested (M-24) |
 
 ## 3. Authorisation
 
@@ -45,7 +45,7 @@ Manual tests use Chrome on the development laptop; press **F12 → Network** to 
 | D4 | Content-Security-Policy: scripts and styles only from this site; no inline scripts | XSS even if escaping were missed | `app/bootstrap.php` | F12 → Network → any page → `Content-Security-Policy` header | Tested (T3-07) |
 | D5 | Server-side validation of every form (types, lengths, e-mail, Sri Lankan phone, district list, amounts) | Invalid or malicious data | `Validator`, services | Checkout with phone `123` → error under the field | Tested |
 | D6 | CHECK constraints, foreign keys and unique keys in the database | Bad data even if the code had a bug | `sql/schema.sql` | phpMyAdmin: `UPDATE products SET stock_quantity=-1 WHERE id=1` → error | Tested on MariaDB (T2-2) |
-| D7 | Least-privilege database user (`giftaura_app`: SELECT/INSERT/UPDATE/DELETE on `giftaura_db` only) | Damage if the app were compromised | `sql/00_create_database_and_user.sql` | `mysql -u giftaura_app -p -e "DROP TABLE giftaura_db.settings"` → Access denied | Manual (T2-4) |
+| D7 | Least-privilege database user (`giftaura_app`: SELECT/INSERT/UPDATE/DELETE on `giftaura_db` only) | Damage if the app were compromised | `sql/00_create_database_and_user.sql` | `mysql -u giftaura_app -p -e "DROP TABLE giftaura_db.settings"` → Access denied | Tested (DB-04) |
 | D8 | CSV export neutralises cells starting with `= + - @` | Formula injection in Excel | `ReportService::csvCell()` | Customer name `=HYPERLINK(...)` → exported as `'=HYPERLINK(...)` | Tested (admin_e2e) |
 
 ## 5. Requests
@@ -56,8 +56,8 @@ Manual tests use Chrome on the development laptop; press **F12 → Network** to 
 | R2 | Changes only by POST (logout too); Post/Redirect/Get | Changes through links/images; double submission on refresh | all pages | `localhost/giftaura/logout.php` typed in the address bar does not log out | Tested (T3-04) |
 | R3 | Redirect targets (`next=`) must be inside the site | Open redirect / phishing | `safe_next()` | `login.php?next=https://evil.com` → after login you stay on GiftAura | Tested (T3-12) |
 | R4 | Prices and totals recalculated from the database; cart fingerprint must match | Price tampering | `CartService`, `OrderService::placeOrder()` | Add `total_amount=1` to the checkout form → ignored / refused | Tested (T5-07) |
-| R5 | Transactions with row locks; stock can never go below zero | Overselling, race conditions | `OrderService`, `InventoryService` | Two customers buy the last unit at once → one order | Tested (T5-15, SQLite); MariaDB in Phase 8 |
-| R6 | Double-submit protection: buttons disabled after the first click | Duplicate orders | `shop.js`, `admin.js` | Double-click Place order → one order | Built (manual) |
+| R5 | Transactions with row locks; stock can never go below zero | Overselling, race conditions | `OrderService`, `InventoryService` | Two customers buy the last unit at once → one order | Tested (T5-15; MariaDB row lock DB-08) |
+| R6 | Double-submit protection: buttons disabled after the first click | Duplicate orders | `shop.js`, `admin.js` | Double-click Place order → one order | Built — not separately tested |
 
 ## 6. Files and server
 
@@ -65,11 +65,11 @@ Manual tests use Chrome on the development laptop; press **F12 → Network** to 
 |---|---|---|---|---|---|
 | F1 | Upload checks: size ≤ 2 MB, extension, real MIME (`finfo`), `getimagesize`, 100–5000 px | Uploading scripts or fake images | `ImageUploader` | Upload a `.php` file or a text file renamed `.jpg` → refused | Tested (admin_e2e) |
 | F2 | Images re-encoded with GD into a new file with a random 32-character name | Hidden code and EXIF/GPS data in images; path tricks | `ImageUploader` | Upload a JPEG with PHP code appended → saved file contains no PHP | Tested (admin_e2e) |
-| F3 | `public/uploads/.htaccess`: PHP engine off, scripts denied, only jpg/png/webp served | Running an uploaded script | `public/uploads/.htaccess` | `localhost/giftaura/uploads/products/x.php` → 403/404 | Manual |
-| F4 | Only `public/` is reachable; `app/`, `config/`, `sql/`, `storage/`, `scripts/`, `docs/`, `tests/` denied; hidden files and `env-check.php` denied; no directory listings | Leaking code, passwords, logs, SQL | root `.htaccess` + folder `.htaccess` files | `localhost/giftaura/config/config.php`, `/sql/schema.sql`, `/storage/logs/` → 403 or 404 | Manual (Phase 8) |
+| F3 | `public/uploads/.htaccess`: PHP engine off, scripts denied, only jpg/png/webp served | Running an uploaded script | `public/uploads/.htaccess` | `localhost/giftaura/uploads/products/x.php` → 403/404 | Tested (WEB-20) |
+| F4 | Only `public/` is reachable; `app/`, `config/`, `sql/`, `storage/`, `scripts/`, `docs/`, `tests/` denied; hidden files and `env-check.php` denied; no directory listings | Leaking code, passwords, logs, SQL | root `.htaccess` + folder `.htaccess` files | `localhost/giftaura/config/config.php`, `/sql/schema.sql`, `/storage/logs/` → 403 or 404 | Tested (WEB-07 – WEB-19) |
 | F5 | Database password only in `config/config.php`, excluded from Git | Credentials in the repository | `.gitignore` | `git ls-files config` → only `config.example.php` and `.htaccess` | Verified (Phase 3 commit) |
 | F6 | Errors: generic page for visitors, details only in `storage/logs`; `display_errors` off; passwords/tokens/bank numbers removed from log context | Information disclosure | `app/bootstrap.php`, `Logger`, root `.htaccess` | Stop MySQL in XAMPP, open the shop → "Something went wrong" without SQL details | Tested (T3-08) |
-| F7 | Security headers: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`; `X-Powered-By` removed; HSTS when served over HTTPS | Click-jacking, MIME sniffing, version disclosure | `app/bootstrap.php`, root `.htaccess` | F12 → Network → headers | Tested (Phase 7) |
+| F7 | Security headers: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`; `X-Powered-By` removed; HSTS when served over HTTPS | Click-jacking, MIME sniffing, version disclosure | `app/bootstrap.php`, root `.htaccess` | F12 → Network → headers | Tested (WEB-02 – WEB-05) |
 | F8 | Activity log of all admin actions (never secrets) | Untraceable changes | `ActivityLogService` | Admin → Activity log | Tested (admin_e2e) |
 
 ## 7. Known limitations (honest list for the report)
@@ -85,7 +85,7 @@ Manual tests use Chrome on the development laptop; press **F12 → Network** to 
 
 ## 8. Before demonstration or deployment
 
-- [ ] `public/env-check.php` deleted (it is also blocked by `.htaccess`)
+- [ ] `public/env-check.php` deleted (it is also blocked by `.htaccess`; checked by WEB-17/18)
 - [ ] `config/config.php` has `'debug' => false`
 - [ ] Real store details entered in Admin → Settings (or left empty — nothing is invented)
 - [ ] Sample products replaced or clearly marked as samples

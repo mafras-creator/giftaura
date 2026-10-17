@@ -5,7 +5,19 @@ An online shop for the GiftAura gift store: flower bouquets, beauty creams and g
 
 **Stack:** HTML5 · CSS3 · vanilla JavaScript · PHP 8.2 · MariaDB 10.4 · Apache (XAMPP). No frameworks and no Composer packages.
 
-> **Project status: Phase 7 complete.** All customer and administration features are built, and security hardening is done (see `docs/security-checklist.md`). Phase 8 is full testing on MariaDB; Phase 9 completes the user guides. See `docs/01-requirements.md` for the status of each requirement.
+> **Project status: complete (Phase 9).** All 65 requirements are built and tested: 48 unit checks, 160 automated end-to-end checks, 43 checks on the real XAMPP server and 25 manual acceptance tests all passed (see `docs/test-plan.md`).
+
+## Features at a glance
+
+| Customers | Administrators |
+|---|---|
+| Browse categories and subcategories; search, filter by price and stock, sort, paginate | Dashboard with live sales, pending orders, payments to verify and stock alerts |
+| Product pages with photos, price in LKR and live availability | Products with secure photo upload; categories and subcategories |
+| Cart (kept after login), quantity limits, live totals and delivery charge | Stock restock/corrections with a full stock ledger and low-stock alerts |
+| Checkout with saved addresses, Cash on delivery or bank transfer | Order workflow Pending → Confirmed → Processing → Ready → Delivered / Cancelled |
+| Order reference, order history, progress tracking, cancel while pending | Payment recording: paid, failed, refunded (with who and when) |
+| Bank-transfer reference submission; public order tracking | Customers: details, orders, deactivate, temporary password |
+| Profile, password and address book | Reports for any date range with CSV export; activity log; store settings |
 
 ---
 
@@ -54,11 +66,27 @@ There is no default admin account and no way to become an admin through the webs
 C:\xampp\php\php.exe scripts\create_admin.php
 ```
 
+Run it again any time to add another administrator (one per staff member).
+
 ### 2.6 Open the shop
 - Shop: <http://localhost/giftaura/>
 - Admin: <http://localhost/giftaura/admin/>
 
-## 3. Project layout
+### 2.7 Check the installation
+```
+C:\xampp\php\php.exe scripts\system_check.php
+```
+All checks should pass. It tests the database rules, the security of private folders, and page speed, without changing any data.
+
+## 3. Daily use
+
+- **Start:** open the XAMPP Control Panel → **Start** Apache and MySQL → open the shop.
+- **Stop:** **Stop** both in XAMPP when finished.
+- **Backup:** double-click `scripts\backup.bat` every week (see `docs/deployment-and-backup.md`).
+- **Staff instructions:** `docs/admin-guide.md`. **Customer instructions:** `docs/customer-guide.md`.
+- **Problems:** `docs/troubleshooting.md`.
+
+## 4. Project layout
 
 ```
 giftaura/
@@ -73,23 +101,34 @@ giftaura/
 ```
 Full tree: `docs/04-file-structure.md`.
 
-## 4. Documentation
+## 5. Documentation
 
 | Document | File |
 |---|---|
-| Requirements checklist | `docs/01-requirements.md` |
-| System architecture, order and payment workflows | `docs/02-architecture.md` |
-| Database design and ER diagram | `docs/03-database-design.md` |
-| File structure | `docs/04-file-structure.md` |
-| Security checklist (controls, how to test them, known limitations) | `docs/security-checklist.md` |
-| Phase-by-phase log of files and test results | `docs/phase-log.md` |
-| All diagrams as pictures | `docs/diagrams.html` — open the file directly from disk (double-click). It needs an internet connection the first time to load the diagram library. Rebuild with `C:\xampp\php\php.exe scripts\build_diagrams.php`. |
+| Requirements checklist and business rules | `docs/01-requirements.md` |
+| System architecture, sequence and state diagrams, security layers | `docs/02-architecture.md` |
+| Database design, ER diagram, normalisation | `docs/03-database-design.md` |
+| File structure and page → service → table map | `docs/04-file-structure.md` |
+| Use-case diagram and system flow diagrams | `docs/05-use-cases-and-flows.md` |
+| All 12 diagrams as pictures (SVG download) | `docs/diagrams.html` — double-click to open; needs internet the first time. Rebuild with `C:\xampp\php\php.exe scripts\build_diagrams.php` |
+| Security checklist, how to test each control, known limitations | `docs/security-checklist.md` |
+| Test plan, results, manual tests, traceability, defect log | `docs/test-plan.md` |
+| Administrator user guide | `docs/admin-guide.md` |
+| Customer user guide | `docs/customer-guide.md` |
+| Troubleshooting guide | `docs/troubleshooting.md` |
+| Deployment, backup and restore | `docs/deployment-and-backup.md` |
+| Demonstration script, screenshot list, viva questions | `docs/demo-script.md` |
+| Phase-by-phase log of files and tests | `docs/phase-log.md` |
 
-## 5. Payments
+## 6. Payments
 
-Cash on Delivery and manual bank transfer (verified by an administrator). **No online card payment gateway is integrated.**
+Cash on Delivery and manual bank transfer (verified by an administrator). **No online card payment gateway is integrated**, and the website never asks for card details. Known limitations and possible improvements are listed in `docs/security-checklist.md` §7.
 
-## 6. Version control checkpoints
+## 7. Sample data
+
+`sql/seed.sql` contains **sample** products (names start with "Sample", SKUs with "SAMPLE-") with invented prices and stock for testing. Store contact and bank details are left empty on purpose. Replace them with GiftAura's real information from the admin panel before real use.
+
+## 8. Version control checkpoints
 
 One Git commit is made at the end of every phase:
 ```
@@ -97,4 +136,4 @@ git add -A
 git commit -m "Phase N: <summary>"
 git log --oneline
 ```
-`config/config.php`, logs and uploaded images are excluded by `.gitignore`.
+`config/config.php`, logs, uploaded images and backups are excluded by `.gitignore`.

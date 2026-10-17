@@ -228,3 +228,39 @@ The Phase 5 shop tests (`tests/shop_e2e.sh`) were re-run on the Phase 6 code: **
 | `tests/admin_e2e.sh` | 106 / 106 |
 | `scripts/system_check.php` (laptop, MariaDB + Apache) | 43 / 43 |
 | Manual acceptance tests (laptop) | 25 / 25 |
+
+**Tested on the laptop:** Phase 8 committed to Git.
+
+## Phase 9 — Documentation and demonstration preparation (17 Oct 2026)
+
+### Files
+| Status | Files |
+|---|---|
+| New | `docs/05-use-cases-and-flows.md` (use-case diagram, use-case descriptions, 6 flow diagrams), `docs/admin-guide.md`, `docs/customer-guide.md`, `docs/troubleshooting.md`, `docs/deployment-and-backup.md`, `docs/demo-script.md`, `scripts/backup.bat`, `.gitattributes` |
+| Updated | `docs/04-file-structure.md` (final tree and page → service → table map), `docs/02-architecture.md` (payment diagram: failed → paid), `docs/security-checklist.md` (test IDs from Phase 8), `docs/diagrams.html` (12 diagrams), `README.md` (final) |
+
+### Checks run by Claude
+- `php -l` on all PHP files: no errors. No application code changed in this phase.
+- Every file path mentioned in `README.md` and `docs/*.md` was checked to exist (the only exceptions are `config/config.php`, which is created on each computer, and `public/env-check.php`, which was deliberately deleted).
+- `docs/diagrams.html` rebuilt with 12 diagrams. The Mermaid diagrams could not be rendered in the build workspace (no browser or internet access), so they are to be checked visually by opening `docs/diagrams.html` on the laptop.
+- `scripts/backup.bat` could not be run in the build workspace (Windows-only); it is to be run once on the laptop.
+
+## Project deliverables (from the project brief) → where they are
+
+| # | Deliverable | Location |
+|---|---|---|
+| 1 | Complete source code | `app/`, `public/`, `scripts/` |
+| 2 | MySQL schema and sample seed data | `sql/schema.sql`, `sql/seed.sql`, `sql/00_create_database_and_user.sql` |
+| 3 | Secure database configuration template | `config/config.example.php`, `scripts/setup.php` |
+| 4 | README with installation and startup instructions | `README.md` |
+| 5 | Functional requirements list | `docs/01-requirements.md` |
+| 6 | Database ER diagram | `docs/03-database-design.md`, `docs/diagrams.html` |
+| 7 | System architecture diagram | `docs/02-architecture.md`, `docs/diagrams.html` |
+| 8 | Use-case diagram and system flow diagrams | `docs/05-use-cases-and-flows.md`, `docs/diagrams.html` |
+| 9 | Test plan with test cases and actual results | `docs/test-plan.md`, `tests/`, `scripts/system_check.php` |
+| 10 | Troubleshooting guide | `docs/troubleshooting.md` |
+| 11 | Administrator user guide | `docs/admin-guide.md` |
+| 12 | Customer user guide | `docs/customer-guide.md` |
+| 13 | Security checklist | `docs/security-checklist.md` |
+| 14 | Deployment and backup instructions | `docs/deployment-and-backup.md`, `scripts/backup.bat` |
+| — | Screenshots and demonstration preparation | `docs/demo-script.md` (screenshot list, script, viva questions) |

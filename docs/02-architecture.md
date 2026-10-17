@@ -136,6 +136,7 @@ stateDiagram-v2
     awaiting_verification --> failed : admin rejects transfer
     pending --> failed : admin
     failed --> awaiting_verification : customer resubmits reference
+    failed --> paid : admin records payment received later
     paid --> refunded : admin records refund
     refunded --> [*]
 ```

@@ -25,7 +25,7 @@
 <body>
 <div class="top">
   <h1>GiftAura — System Diagrams</h1>
-  <p>5 diagrams generated from docs/*.md on 2026-10-16 14:44. Regenerate with: php scripts/build_diagrams.php</p>
+  <p>12 diagrams generated from docs/*.md on 2026-10-17 04:11. Regenerate with: php scripts/build_diagrams.php</p>
 </div>
 <main>
   <div class="notice" id="offline">Diagrams could not be drawn because the Mermaid library did not load. Connect to the internet and refresh, or paste the code shown below into https://mermaid.live.</div>
@@ -149,6 +149,7 @@
     awaiting_verification --&gt; failed : admin rejects transfer
     pending --&gt; failed : admin
     failed --&gt; awaiting_verification : customer resubmits reference
+    failed --&gt; paid : admin records payment received later
     paid --&gt; refunded : admin records refund
     refunded --&gt; [*]</pre>
     </section>
@@ -329,6 +330,187 @@
         enum value_type
         varchar label
     }</pre>
+    </section>
+    <section class="diagram">
+      <header>
+        <h2>6. Use-case diagram</h2>
+        <span class="src">from docs/05-use-cases-and-flows.md</span>
+        <button type="button" data-download="d6">Download SVG</button>
+      </header>
+      <pre class="mermaid" id="d6">flowchart LR
+    G([&quot;👤 Guest&quot;])
+    C([&quot;👤 Customer&quot;])
+    A([&quot;👤 Administrator&quot;])
+
+    subgraph Shop[&quot;GiftAura online shop&quot;]
+        UC1([&quot;Browse categories&quot;])
+        UC2([&quot;Search, filter and sort products&quot;])
+        UC3([&quot;View product details&quot;])
+        UC4([&quot;Manage cart&quot;])
+        UC5([&quot;Register&quot;])
+        UC6([&quot;Log in / log out&quot;])
+        UC7([&quot;Track order by reference&quot;])
+        UC8([&quot;Check out and place order&quot;])
+        UC9([&quot;View order history and status&quot;])
+        UC10([&quot;Cancel pending order&quot;])
+        UC11([&quot;Submit bank-transfer reference&quot;])
+        UC12([&quot;Manage profile, password and addresses&quot;])
+    end
+
+    subgraph Admin[&quot;Administration panel&quot;]
+        UA1([&quot;View dashboard&quot;])
+        UA2([&quot;Manage categories&quot;])
+        UA3([&quot;Manage products and images&quot;])
+        UA4([&quot;Adjust stock / view stock history&quot;])
+        UA5([&quot;Manage orders and status&quot;])
+        UA6([&quot;Record payments&quot;])
+        UA7([&quot;Manage customers&quot;])
+        UA8([&quot;Generate reports and export CSV&quot;])
+        UA9([&quot;Edit store settings&quot;])
+        UA10([&quot;View activity log&quot;])
+    end
+
+    G --&gt; UC1 &amp; UC2 &amp; UC3 &amp; UC4 &amp; UC5 &amp; UC6 &amp; UC7
+    C --&gt; UC1 &amp; UC2 &amp; UC3 &amp; UC4 &amp; UC6 &amp; UC7 &amp; UC8 &amp; UC9 &amp; UC10 &amp; UC11 &amp; UC12
+    A --&gt; UC6
+    A --&gt; UA1 &amp; UA2 &amp; UA3 &amp; UA4 &amp; UA5 &amp; UA6 &amp; UA7 &amp; UA8 &amp; UA9 &amp; UA10</pre>
+    </section>
+    <section class="diagram">
+      <header>
+        <h2>7. Customer purchase flow</h2>
+        <span class="src">from docs/05-use-cases-and-flows.md</span>
+        <button type="button" data-download="d7">Download SVG</button>
+      </header>
+      <pre class="mermaid" id="d7">flowchart TD
+    S([Customer opens the shop]) --&gt; B[Browse, search or filter]
+    B --&gt; P[Open product page]
+    P --&gt; Q{In stock?}
+    Q -- No --&gt; B
+    Q -- Yes --&gt; AC[Add to cart&lt;br/&gt;quantity limited to stock and setting]
+    AC --&gt; CART[Cart page&lt;br/&gt;live prices and stock check]
+    CART --&gt; PR{Any item with a problem?}
+    PR -- Yes --&gt; FIX[Change quantity or remove item] --&gt; CART
+    PR -- No --&gt; LOG{Logged in?}
+    LOG -- No --&gt; L[Log in or register&lt;br/&gt;guest cart is merged] --&gt; CO
+    LOG -- Yes --&gt; CO[Checkout: contact, address, payment method]
+    CO --&gt; V{Form valid?}
+    V -- No --&gt; CO
+    V -- Yes --&gt; TX[[Place order transaction&lt;br/&gt;see section 6]]
+    TX --&gt; OK{Succeeded?}
+    OK -- No, stock or price changed --&gt; CART
+    OK -- Yes --&gt; CONF([Confirmation with order reference])
+    CONF --&gt; PM{Payment method}
+    PM -- Cash on delivery --&gt; WAIT[Wait for delivery]
+    PM -- Bank transfer --&gt; REF[Transfer money and submit reference] --&gt; WAIT</pre>
+    </section>
+    <section class="diagram">
+      <header>
+        <h2>8. Administrator order-fulfilment flow</h2>
+        <span class="src">from docs/05-use-cases-and-flows.md</span>
+        <button type="button" data-download="d8">Download SVG</button>
+      </header>
+      <pre class="mermaid" id="d8">flowchart TD
+    N([New order appears: Pending&lt;br/&gt;badge in sidebar]) --&gt; O[Open order: items, customer, address]
+    O --&gt; M{Payment method}
+    M -- Bank transfer --&gt; R{Reference received&lt;br/&gt;and money in bank?}
+    R -- Yes --&gt; PAID[Record payment: Paid] --&gt; CF
+    R -- No / wrong --&gt; FAIL[Record payment: Failed&lt;br/&gt;customer can resubmit] --&gt; O
+    M -- Cash on delivery --&gt; CF[Status: Confirmed]
+    CF --&gt; PRC[Status: Processing&lt;br/&gt;prepare the gift]
+    PRC --&gt; RD[Status: Ready for delivery]
+    RD --&gt; DL[Status: Delivered]
+    DL --&gt; COD{Cash on delivery?}
+    COD -- Yes --&gt; CASH[Record payment: Paid&lt;br/&gt;note: cash collected]
+    COD -- No --&gt; END([Order complete])
+    CASH --&gt; END
+    O -.-&gt;|customer request or problem| CAN[Status: Cancelled&lt;br/&gt;stock restored automatically]
+    CF -.-&gt; CAN
+    PRC -.-&gt; CAN</pre>
+    </section>
+    <section class="diagram">
+      <header>
+        <h2>9. Order placement transaction (inside the server)</h2>
+        <span class="src">from docs/05-use-cases-and-flows.md</span>
+        <button type="button" data-download="d9">Download SVG</button>
+      </header>
+      <pre class="mermaid" id="d9">flowchart TD
+    A([Place order clicked]) --&gt; B[Check CSRF token, login, form fields]
+    B --&gt; C[START TRANSACTION]
+    C --&gt; D[Read cart lines]
+    D --&gt; E[Lock the products: SELECT ... FOR UPDATE]
+    E --&gt; F{All active and enough stock?}
+    F -- No --&gt; X[ROLLBACK&lt;br/&gt;nothing changed] --&gt; Y([Show message, back to cart])
+    F -- Yes --&gt; G[Recalculate subtotal, delivery and total&lt;br/&gt;from database prices]
+    G --&gt; H{Matches what the customer saw?&lt;br/&gt;cart fingerprint}
+    H -- No --&gt; X
+    H -- Yes --&gt; I[Insert order with contact and address snapshot]
+    I --&gt; J[Insert order items: name, SKU, price, quantity snapshot]
+    J --&gt; K[Reduce stock + write ledger row per product]
+    K --&gt; L[Insert payment: pending]
+    L --&gt; M[Insert status history: pending]
+    M --&gt; N[Empty the cart]
+    N --&gt; O[COMMIT]
+    O --&gt; P([Confirmation page])</pre>
+    </section>
+    <section class="diagram">
+      <header>
+        <h2>10. Login and access-control flow</h2>
+        <span class="src">from docs/05-use-cases-and-flows.md</span>
+        <button type="button" data-download="d10">Download SVG</button>
+      </header>
+      <pre class="mermaid" id="d10">flowchart TD
+    A([Login form submitted]) --&gt; B{CSRF token valid?}
+    B -- No --&gt; B1([Page expired])
+    B -- Yes --&gt; C{Too many failures?&lt;br/&gt;5 per e-mail / 20 per IP in 15 min}
+    C -- Yes --&gt; C1([Too many attempts — wait])
+    C -- No --&gt; D{E-mail exists, password correct,&lt;br/&gt;account active?}
+    D -- No --&gt; D1[Record failed attempt] --&gt; D2([Same generic error message])
+    D -- Yes --&gt; E[Record success, new session ID,&lt;br/&gt;merge guest cart]
+    E --&gt; F{Role}
+    F -- admin --&gt; G([Admin dashboard])
+    F -- customer --&gt; H([My account or the page they wanted])
+
+    R([Any admin page requested]) --&gt; S{Logged in?}
+    S -- No --&gt; S1([Redirect to login])
+    S -- Yes --&gt; T{Role = admin&lt;br/&gt;read from database}
+    T -- No --&gt; T1([403 Access denied, logged])
+    T -- Yes --&gt; T2([Page shown])</pre>
+    </section>
+    <section class="diagram">
+      <header>
+        <h2>11. Secure image-upload flow</h2>
+        <span class="src">from docs/05-use-cases-and-flows.md</span>
+        <button type="button" data-download="d11">Download SVG</button>
+      </header>
+      <pre class="mermaid" id="d11">flowchart TD
+    A([Admin chooses a file and clicks Upload]) --&gt; B{CSRF valid and admin?}
+    B -- No --&gt; Z([Refused])
+    B -- Yes --&gt; C{Size ≤ 2 MB?}
+    C -- No --&gt; E1([Too large])
+    C -- Yes --&gt; D{Extension jpg/png/webp&lt;br/&gt;AND real type by finfo matches?}
+    D -- No --&gt; E2([Only JPG, PNG, WebP])
+    D -- Yes --&gt; E{getimagesize: real image,&lt;br/&gt;100–5000 px?}
+    E -- No --&gt; E3([Not a valid image])
+    E -- Yes --&gt; F[Re-encode with GD into a new image&lt;br/&gt;max 1600 px, metadata removed]
+    F --&gt; G[Save as random 32-character name]
+    G --&gt; H[Insert product_images row&lt;br/&gt;first image becomes main]
+    H --&gt; I([Shown in admin and shop])</pre>
+    </section>
+    <section class="diagram">
+      <header>
+        <h2>12. Inventory flow (every stock change)</h2>
+        <span class="src">from docs/05-use-cases-and-flows.md</span>
+        <button type="button" data-download="d12">Download SVG</button>
+      </header>
+      <pre class="mermaid" id="d12">flowchart LR
+    S1[Opening stock] --&gt; INV
+    S2[Restock by admin] --&gt; INV
+    S3[Correction by admin&lt;br/&gt;note required] --&gt; INV
+    S4[Order placed] --&gt; INV
+    S5[Order cancelled] --&gt; INV
+    INV[[InventoryService::adjust&lt;br/&gt;inside a transaction]] --&gt; U[UPDATE stock&lt;br/&gt;only if result ≥ 0]
+    U --&gt; L[Insert inventory_movements row&lt;br/&gt;change, stock after, reason, who]
+    L --&gt; R[Dashboard low-stock alerts&lt;br/&gt;and inventory reports]</pre>
     </section>
 </main>
 <script type="module">
