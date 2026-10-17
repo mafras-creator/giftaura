@@ -202,3 +202,29 @@ The Phase 5 shop tests (`tests/shop_e2e.sh`) were re-run on the Phase 6 code: **
 - Headers: guest page has `X-Frame-Options`, `Cross-Origin-Opener-Policy`, no `X-Powered-By`; logged-in page has `Cache-Control: no-store, private`.
 
 **Not verifiable here (no Apache in the test workspace):** the `.htaccess` rules themselves. They are part of the Phase 8 manual tests on the laptop.
+
+**Tested on the laptop:** Phase 7 installed; user started Phase 8.
+
+## Phase 8 — Testing (16 Oct 2026)
+
+### Files
+| Status | Files |
+|---|---|
+| New | `scripts/system_check.php` (43 automated checks on the real XAMPP server: MariaDB constraints, row lock, least-privilege user, data consistency, `.htaccess` protection, headers, uploads cannot run PHP, page speed); `docs/test-plan.md` (levels, environment, criteria, results, 25 manual acceptance tests, traceability, defect log) |
+
+### Tests run by Claude
+- `php -l scripts/system_check.php`: no syntax errors.
+- The system check itself needs Apache + MariaDB and is therefore run **on the laptop**; its first results will be recorded in `docs/test-plan.md` §5.4.
+
+**Tested on the laptop (16 Oct 2026):** `scripts/system_check.php` — **43 of 43 checks passed** on MariaDB + Apache (includes the MariaDB row-lock test DB-08 and all `.htaccess` protections).
+
+**Manual acceptance tests (16–17 Oct 2026):** M-01 – M-25 all passed on the laptop (Chrome, desktop, 390 px phone and 768 px tablet views). Details in `docs/test-plan.md` §6.
+
+### Phase 8 summary
+| Suite | Result |
+|---|---|
+| Unit checks | 48 / 48 |
+| `tests/shop_e2e.sh` | 54 / 54 |
+| `tests/admin_e2e.sh` | 106 / 106 |
+| `scripts/system_check.php` (laptop, MariaDB + Apache) | 43 / 43 |
+| Manual acceptance tests (laptop) | 25 / 25 |

@@ -1,0 +1,53 @@
+GiftAura system check — 2026-10-16 23:07 — http://localhost/giftaura/
+PHP 8.2.12 on Windows
+
+1. Database (MariaDB)
+  [PASS] DB-01  Connect as giftaura_app on port 3307 — 10.4.32-MariaDB
+  [PASS] DB-02  All 15 tables exist — 15 tables
+  [PASS] DB-03  Session time zone is Sri Lanka (+05:30) — +05:30
+  [PASS] DB-04  App user has only SELECT/INSERT/UPDATE/DELETE (least privilege) — no DROP/ALTER/CREATE
+  [PASS] DB-05  Database refuses negative stock (CHECK constraint)
+  [PASS] DB-06  Database refuses an order whose total does not add up
+  [PASS] DB-07  Database refuses a product in a non-existent category (foreign key)
+  [PASS] DB-08  Row lock: a second checkout waits while the first holds the product (no overselling) — second connection blocked for 2.7s
+  [PASS] DB-09  Stock ledger matches stock for every product — all products consistent
+  [PASS] DB-10  Every order subtotal equals the sum of its items — 0 mismatched
+  [PASS] DB-11  Every order has a payment record — 0 without payment
+  [PASS] DB-12  No plain-text passwords stored — 0 suspicious
+
+2. Web server and security (Apache + .htaccess)
+  [PASS] WEB-01 Homepage loads — HTTP 200, 62 ms
+  [PASS] WEB-02 Content-Security-Policy header present
+  [PASS] WEB-03 X-Frame-Options: DENY (no click-jacking)
+  [PASS] WEB-04 X-Content-Type-Options: nosniff
+  [PASS] WEB-05 PHP version not advertised (no X-Powered-By) — hidden
+  [PASS] WEB-06 Session cookie is HttpOnly and SameSite=Lax — ok
+  [PASS] WEB-07 Blocked: database password file (/config/config.php) — HTTP 403
+  [PASS] WEB-08 Blocked: config template (/config/config.example.php) — HTTP 403
+  [PASS] WEB-09 Blocked: application code (/app/bootstrap.php) — HTTP 403
+  [PASS] WEB-10 Blocked: database script (/sql/schema.sql) — HTTP 403
+  [PASS] WEB-11 Blocked: error logs (/storage/logs/) — HTTP 403
+  [PASS] WEB-12 Blocked: setup script (/scripts/setup.php) — HTTP 403
+  [PASS] WEB-13 Blocked: test files (/tests/README.md) — HTTP 403
+  [PASS] WEB-14 Blocked: documentation (/docs/01-requirements.md) — HTTP 403
+  [PASS] WEB-15 Blocked: Git repository (/.git/config) — HTTP 403
+  [PASS] WEB-16 Blocked: server rules (/.htaccess) — HTTP 403
+  [PASS] WEB-17 Blocked: old environment page (/env-check.php) — HTTP 403
+  [PASS] WEB-18 Blocked: old environment page (direct path) (/public/env-check.php) — HTTP 403
+  [PASS] WEB-19 Blocked: upload folder listing (/uploads/products/) — HTTP 403
+  [PASS] WEB-20 A .php file placed in uploads cannot run — HTTP 403; test file deleted
+  [PASS] WEB-21 Guest opening admin is sent to login — HTTP 303
+  [PASS] WEB-22 SQL text in search is harmless — HTTP 200
+  [PASS] WEB-23 Script text in search is shown as text (XSS blocked) — HTTP 200
+  [PASS] WEB-24 Unknown page shows the GiftAura 404 page — HTTP 404
+  [PASS] WEB-25 Logout cannot be triggered by a simple link (GET) — HTTP 303
+
+3. Performance (NFR-18: pages under 1 second on the local server)
+  [PASS] PERF-01 Homepage — median 19 ms of 3
+  [PASS] PERF-02 Shop (all products) — median 22 ms of 3
+  [PASS] PERF-03 Search — median 30 ms of 3
+  [PASS] PERF-04 Category — median 18 ms of 3
+  [PASS] PERF-05 Product page — median 21 ms of 3
+  [PASS] PERF-06 Cart — median 16 ms of 3
+
+RESULT: 43 of 43 checks passed — all good.
