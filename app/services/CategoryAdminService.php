@@ -154,7 +154,40 @@ final class CategoryAdminService
                 . ' subcategory(ies). Move them first, or deactivate the category instead.';
         }
         Database::execute('DELETE FROM categories WHERE id = :id', ['id' => $id]);
+        if (!empty($category['image_file'])) {
+            ImageUploader::delete($category['image_file'], 'categories');
+        }
         ActivityLogService::log($adminId, 'category.delete', 'category', $id, $category['name']);
+        return null;
+    }
+
+    /**
+     * Upload ($file) or remove the round picture shown on the homepage.
+     * Returns an error message or null.
+     */
+    public static function setImage(int $id, ?array $file, bool $remove, int $adminId): ?string
+    {
+        $category = self::find($id);
+        if ($category === null) {
+            return 'Category not found.';
+        }
+        $hasFile = $file !== null && ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE;
+        if (!$hasFile && !$remove) {
+            return null;
+        }
+        $newFile = null;
+        if ($hasFile) {
+            $upload = ImageUploader::store($file, false, 'categories');
+            if (isset($upload['error'])) {
+                return 'The category was saved, but the picture was not: ' . $upload['error'];
+            }
+            $newFile = $upload['file'];
+        }
+        Database::execute('UPDATE categories SET image_file = :f WHERE id = :id', ['f' => $newFile, 'id' => $id]);
+        if (!empty($category['image_file'])) {
+            ImageUploader::delete($category['image_file'], 'categories');
+        }
+        ActivityLogService::log($adminId, 'category.picture', 'category', $id, $category['name'] . ($newFile !== null ? ': new picture' : ': picture removed'));
         return null;
     }
 }

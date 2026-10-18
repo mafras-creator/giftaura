@@ -25,7 +25,7 @@
                 <tbody>
                 <?php foreach ($result['items'] as $c): ?>
                     <tr>
-                        <td><a href="<?= e(url('admin/customer.php', ['id' => $c['id']])) ?>"><strong><?= e($c['full_name']) ?></strong></a><br><small class="muted"><?= e($c['email']) ?></small></td>
+                        <td><a href="<?= e(url('admin/customer.php', ['id' => $c['id']])) ?>"><strong><?= e($c['full_name']) ?></strong></a><br><small class="muted"><?= e($c['email']) ?></small><?php if ($c['email_verified_at'] === null): ?> <span class="badge badge--warning">E-mail not verified</span><?php endif; ?></td>
                         <td><?= e($c['phone'] ?? '') ?></td>
                         <td><?= e(format_datetime($c['created_at'])) ?></td>
                         <td class="num"><?= e((string) $c['order_count']) ?></td>

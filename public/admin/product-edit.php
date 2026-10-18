@@ -16,8 +16,15 @@ if ($id > 0 && $product === null) {
 $errors = [];
 $old = $product ?? [
     'is_active' => '1', 'is_featured' => '0', 'initial_stock' => '0',
+    'is_customizable' => '0', 'custom_required' => '1', 'custom_max_length' => '100',
     'low_stock_threshold' => setting('default_low_stock_threshold', '5'),
 ];
+// Form shows the normal price and the sale price; the database keeps the
+// price paid (price) and the price before the discount (compare_at_price).
+if ($product !== null && $product['compare_at_price'] !== null) {
+    $old['sale_price'] = $product['price'];
+    $old['price'] = $product['compare_at_price'];
+}
 $back = $id > 0 ? ['id' => $id] : [];
 
 if (is_post()) {
@@ -26,15 +33,25 @@ if (is_post()) {
     $imageId = ctype_digit(post_string('image_id')) ? (int) post_string('image_id') : 0;
 
     if ($action === 'save') {
-        $fields = ['name', 'slug', 'sku', 'category_id', 'short_description', 'description', 'price',
-                   'low_stock_threshold', 'initial_stock', 'is_active', 'is_featured'];
+        $fields = ['name', 'slug', 'sku', 'category_id', 'short_description', 'description', 'price', 'sale_price',
+                   'low_stock_threshold', 'initial_stock', 'is_active', 'is_featured',
+                   'is_customizable', 'custom_label', 'custom_max_length', 'custom_required'];
         $input = [];
         foreach ($fields as $f) {
             $input[$f] = post_string($f);
         }
         $result = ProductAdminService::save($product ? $id : null, $input, $admin['id']);
         if (isset($result['id'])) {
-            Flash::add('success', $product ? 'Product saved.' : 'Product created. You can now add images.');
+            if ($product === null) {
+                // New product: upload the photos chosen in the same form (up to 4).
+                $photos = ProductAdminService::addImages($result['id'], ProductAdminService::uploadedFiles($_FILES['images'] ?? null), '', $admin['id']);
+                Flash::add('success', 'Product created' . ($photos['added'] > 0 ? ' with ' . $photos['added'] . ' photo(s).' : '. You can add photos below.'));
+                foreach ($photos['errors'] as $photoError) {
+                    Flash::add('error', $photoError);
+                }
+            } else {
+                Flash::add('success', 'Product saved.');
+            }
             redirect('admin/product-edit.php', ['id' => $result['id']]);
         }
         $errors = $result['errors'];
@@ -44,12 +61,18 @@ if (is_post()) {
     } else {
         switch ($action) {
             case 'upload':
-                $file = $_FILES['image'] ?? ['error' => UPLOAD_ERR_NO_FILE];
-                if (!is_array($file) || is_array($file['name'] ?? null)) {
-                    $file = ['error' => UPLOAD_ERR_NO_FILE];
+                $files = ProductAdminService::uploadedFiles($_FILES['images'] ?? null, $_FILES['image'] ?? null);
+                if ($files === []) {
+                    Flash::add('error', 'Choose an image to upload.');
+                    break;
                 }
-                $error = ProductAdminService::addImage($id, $file, post_string('alt_text'), $admin['id']);
-                Flash::add($error === null ? 'success' : 'error', $error ?? 'Image uploaded.');
+                $photos = ProductAdminService::addImages($id, $files, post_string('alt_text'), $admin['id']);
+                if ($photos['added'] > 0) {
+                    Flash::add('success', $photos['added'] === 1 ? 'Image uploaded.' : $photos['added'] . ' images uploaded.');
+                }
+                foreach ($photos['errors'] as $photoError) {
+                    Flash::add('error', $photoError);
+                }
                 break;
             case 'primary':
                 Flash::add('success', ProductAdminService::setPrimaryImage($id, $imageId, $admin['id']) ? 'Main image changed.' : 'Image not found.');

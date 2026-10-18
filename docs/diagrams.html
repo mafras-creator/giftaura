@@ -25,7 +25,7 @@
 <body>
 <div class="top">
   <h1>GiftAura — System Diagrams</h1>
-  <p>12 diagrams generated from docs/*.md on 2026-10-17 04:11. Regenerate with: php scripts/build_diagrams.php</p>
+  <p>12 diagrams generated from docs/*.md on 2026-10-17 09:23. Regenerate with: php scripts/build_diagrams.php</p>
 </div>
 <main>
   <div class="notice" id="offline">Diagrams could not be drawn because the Mermaid library did not load. Connect to the internet and refresh, or paste the code shown below into https://mermaid.live.</div>
@@ -178,6 +178,11 @@
     ORDERS |o--o{ INVENTORY_MOVEMENTS : &quot;causes&quot;
     USERS |o--o{ INVENTORY_MOVEMENTS : &quot;made by&quot;
     USERS |o--o{ ADMIN_ACTIVITY_LOG : &quot;performs&quot;
+    USERS ||--o{ USER_TOKENS : &quot;e-mail links&quot;
+    USERS ||--o{ WISHLIST_ITEMS : &quot;saves&quot;
+    PRODUCTS ||--o{ WISHLIST_ITEMS : &quot;saved as&quot;
+    USERS |o--o{ EMAIL_LOG : &quot;receives&quot;
+    ORDERS |o--o{ EMAIL_LOG : &quot;about&quot;
 
     USERS {
         int id PK
@@ -186,6 +191,7 @@
         varchar email UK
         varchar phone
         varchar password_hash
+        datetime email_verified_at &quot;NULL = not verified&quot;
         tinyint is_active
         datetime last_login_at
         datetime created_at
@@ -217,6 +223,7 @@
         varchar name
         varchar slug UK
         varchar description
+        varchar image_file &quot;round picture, optional&quot;
         smallint sort_order
         tinyint is_active
     }
@@ -229,6 +236,7 @@
         varchar short_description
         text description
         decimal price &quot;LKR, 10,2&quot;
+        decimal compare_at_price &quot;normal price when on sale&quot;
         int stock_quantity &quot;CHECK &gt;= 0&quot;
         int low_stock_threshold
         tinyint is_featured
@@ -324,11 +332,50 @@
         varchar ip_address
         datetime created_at
     }
+    WISHLIST_ITEMS {
+        int user_id PK, FK
+        int product_id PK, FK
+        datetime created_at
+    }
+    BANNERS {
+        int id PK
+        varchar title
+        varchar subtitle
+        varchar button_text
+        varchar link_url &quot;shop page or https address&quot;
+        varchar image_file &quot;random name in uploads/banners&quot;
+        tinyint show_text
+        smallint sort_order
+        tinyint is_active
+        date starts_on
+        date ends_on
+    }
     SETTINGS {
         varchar setting_key PK
         varchar setting_value
         enum value_type
         varchar label
+    }
+    USER_TOKENS {
+        bigint id PK
+        int user_id FK
+        enum purpose &quot;verify_email or reset_password&quot;
+        char token_hash UK &quot;SHA-256 of the secret&quot;
+        datetime expires_at
+        datetime used_at
+        datetime created_at
+    }
+    EMAIL_LOG {
+        bigint id PK
+        int user_id FK
+        int order_id FK
+        varchar template
+        varchar recipient
+        varchar subject
+        enum transport &quot;smtp, file, off&quot;
+        enum status &quot;sent, saved, skipped, failed&quot;
+        varchar error
+        datetime created_at
     }</pre>
     </section>
     <section class="diagram">

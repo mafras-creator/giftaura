@@ -140,7 +140,10 @@ try {
 // ---------------------------------------------------------------------
 $config = [
     'db' => ['host' => $host, 'port' => $port, 'name' => $name, 'user' => $user, 'password' => $pass],
-    'app' => ['base_url' => $baseUrl, 'timezone' => 'Asia/Colombo', 'debug' => false],
+    'app' => ['base_url' => $baseUrl, 'timezone' => 'Asia/Colombo', 'debug' => false, 'site_url' => 'http://localhost'],
+    // E-mail starts in TEST MODE (saved to storage/mail). Change with scripts/setup_mail.php
+    'mail' => ['transport' => 'file', 'host' => 'smtp.gmail.com', 'port' => 465, 'encryption' => 'ssl',
+               'username' => '', 'password' => '', 'from_email' => '', 'from_name' => 'GiftAura', 'cafile' => ''],
     'security' => [
         'session_name'         => 'GIFTAURA_SID',
         'session_idle_minutes' => 30,
@@ -149,6 +152,18 @@ $config = [
         'login_window_minutes' => 15,
     ],
 ];
+// Keep existing e-mail settings and site address when the file is replaced.
+if (is_file($configFile)) {
+    $previous = @include $configFile;
+    if (is_array($previous)) {
+        if (isset($previous['mail']) && is_array($previous['mail'])) {
+            $config['mail'] = $previous['mail'] + $config['mail'];
+        }
+        if (!empty($previous['app']['site_url'])) {
+            $config['app']['site_url'] = $previous['app']['site_url'];
+        }
+    }
+}
 $php = "<?php\n"
      . "/**\n"
      . " * GiftAura configuration - created by scripts/setup.php on " . date('Y-m-d H:i') . ".\n"

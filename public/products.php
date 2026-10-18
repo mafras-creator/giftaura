@@ -7,6 +7,7 @@
  *   q         search words
  *   min, max  price range in LKR
  *   in_stock  1 = only products with stock
+ *   sale      1 = only products on sale
  *   sort      newest | price_asc | price_desc | name
  *   page      page number
  * Every value is validated or whitelisted here before it is used.
@@ -44,6 +45,7 @@ if ($min !== '' && $max !== '' && (float) $min > (float) $max) {
 }
 
 $inStock = query_string('in_stock') === '1';
+$onSale = query_string('sale') === '1';
 $sort = array_key_exists(query_string('sort'), ProductService::SORTS) ? query_string('sort') : 'newest';
 $page = ctype_digit(query_string('page')) ? (int) query_string('page') : 1;
 
@@ -53,6 +55,7 @@ $result = ProductService::search([
     'min'      => $min,
     'max'      => $max,
     'in_stock' => $inStock,
+    'on_sale'  => $onSale,
     'sort'     => $sort,
     'page'     => $page,
 ]);
@@ -64,10 +67,11 @@ $filters = array_filter([
     'min'      => $min,
     'max'      => $max,
     'in_stock' => $inStock ? '1' : '',
+    'sale'     => $onSale ? '1' : '',
     'sort'     => $sort !== 'newest' ? $sort : '',
 ], static fn($v) => $v !== '');
 
-$heading = $category['name'] ?? ($q !== '' ? 'Search results' : 'All products');
+$heading = $category['name'] ?? ($q !== '' ? 'Search results' : ($onSale ? 'On sale' : 'All products'));
 
 View::render('shop/products', [
     'title'      => $q !== '' ? 'Search: ' . $q : $heading,
@@ -79,6 +83,7 @@ View::render('shop/products', [
     'min'        => $min,
     'max'        => $max,
     'inStock'    => $inStock,
+    'onSale'     => $onSale,
     'sort'       => $sort,
     'result'     => $result,
     'filters'    => $filters,

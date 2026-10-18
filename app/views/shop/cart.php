@@ -35,6 +35,21 @@
                                 <?php if ($line['problem']): ?>
                                     <p class="cart-line__problem" role="alert"><?= e($line['problem']) ?></p>
                                 <?php endif; ?>
+                                <?php if ($line['customizable'] && $line['available']): ?>
+                                    <?= View::partial('custom-note', ['text' => $line['message'], 'label' => $line['custom_label']]) ?>
+                                    <details class="custom-edit"<?= $line['message'] === '' ? ' open' : '' ?>>
+                                        <summary><?= $line['message'] === '' ? 'Add your personalisation' : 'Edit personalisation' ?></summary>
+                                        <form method="post" action="<?= e(url('cart.php')) ?>">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="action" value="message">
+                                            <input type="hidden" name="product_id" value="<?= e((string) $line['product_id']) ?>">
+                                            <label class="sr-only" for="msg-<?= e((string) $line['product_id']) ?>"><?= e($line['custom_label']) ?></label>
+                                            <textarea id="msg-<?= e((string) $line['product_id']) ?>" name="customization_text" rows="2"
+                                                      maxlength="<?= e((string) $line['custom_max']) ?>" placeholder="<?= e($line['custom_label']) ?>"><?= e($line['message']) ?></textarea>
+                                            <button type="submit" class="btn btn--ghost btn--small">Save message</button>
+                                        </form>
+                                    </details>
+                                <?php endif; ?>
                             </div>
                             <div class="cart-line__actions">
                                 <?php if ($line['available'] && $line['stock_quantity'] > 0): ?>
@@ -83,6 +98,9 @@
                     <button type="button" class="btn btn--primary btn--block" disabled>Proceed to checkout</button>
                 <?php elseif ($user !== null && $user['role'] === 'admin'): ?>
                     <div class="alert alert--info"><span>You are logged in as an administrator. Use a customer account to place orders.</span></div>
+                <?php elseif ($user !== null && $user['email_verified_at'] === null): ?>
+                    <div class="alert alert--warning"><span>Please verify your e-mail address before checking out. Open the link we sent to <?= e($user['email']) ?>.</span></div>
+                    <button type="button" class="btn btn--primary btn--block" disabled>Proceed to checkout</button>
                 <?php else: ?>
                     <a class="btn btn--primary btn--block" href="<?= e(url('checkout.php')) ?>">Proceed to checkout</a>
                     <?php if ($user === null): ?>

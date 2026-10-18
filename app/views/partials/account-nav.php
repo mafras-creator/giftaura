@@ -3,16 +3,19 @@
 $items = [
     ['account/index.php', 'account/', 'Profile'],
     ['account/orders.php', 'account/orders.php', 'My orders'],
+    ['account/wishlist.php', 'account/wishlist.php', 'My wishlist'],
+    ['account/reviews.php', 'account/reviews.php', 'My reviews'],
     ['account/addresses.php', 'account/addresses.php', 'Addresses'],
     ['account/password.php', 'account/password.php', 'Change password'],
 ];
 // "My orders" stays highlighted while viewing a single order
 $isOrderPage = nav_active('account/order.php') !== '';
+$isReviewPage = nav_active('account/review.php') !== '';
 ?>
 <nav class="account-nav" aria-label="My account">
     <ul>
         <?php foreach ($items as [$file, $path, $label]): ?>
-            <?php $active = nav_active($file) !== '' || ($isOrderPage && $file === 'account/orders.php'); ?>
+            <?php $active = nav_active($file) !== '' || ($isOrderPage && $file === 'account/orders.php') || ($isReviewPage && $file === 'account/reviews.php'); ?>
             <li><a class="account-nav__link<?= $active ? ' is-active' : '' ?>" href="<?= e(url($path)) ?>"><?= e($label) ?></a></li>
         <?php endforeach; ?>
     </ul>

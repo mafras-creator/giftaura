@@ -50,12 +50,12 @@ $params = array_filter($filters, static fn($v) => $v !== '');
                                 <img src="<?= e(product_image_url($p['image'])) ?>" alt="" width="44" height="44">
                                 <div>
                                     <a href="<?= e(url('admin/product-edit.php', ['id' => $p['id']])) ?>"><strong><?= e($p['name']) ?></strong></a>
-                                    <br><small class="muted"><?= e($p['sku'] ?? 'No SKU') ?><?= (int) $p['is_featured'] === 1 ? ' · Featured' : '' ?></small>
+                                    <br><small class="muted"><?= e($p['sku'] ?? 'No SKU') ?><?= (int) $p['is_featured'] === 1 ? ' · Featured' : '' ?><?= (int) ($p['is_customizable'] ?? 0) === 1 ? ' · Personalised' : '' ?></small>
                                 </div>
                             </div>
                         </td>
                         <td><?= e($p['category_name']) ?></td>
-                        <td class="num"><?= e(money($p['price'])) ?></td>
+                        <td class="num"><?= e(money($p['price'])) ?><?php if (($sale = sale_info($p)) !== null): ?><br><small class="muted">sale −<?= e((string) $sale['percent']) ?>%, was <s><?= e(money($sale['was'])) ?></s></small><?php endif; ?></td>
                         <td class="num">
                             <?= e((string) $stock) ?>
                             <?php if ($stock === 0): ?><br><span class="badge badge--danger">Out</span>

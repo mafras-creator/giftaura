@@ -39,4 +39,7 @@ View::render('shop/account/order', [
     'history' => OrderService::history((int) $order['id']),
     'payment' => PaymentService::forOrder((int) $order['id']),
     'bank'    => PaymentService::bankDetails(),
+    'reviewed' => $order['status'] === 'delivered'
+        ? ReviewService::reviewedIds($user['id'], array_column(OrderService::items((int) $order['id']), 'product_id'))
+        : [],
 ]);

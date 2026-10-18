@@ -10,13 +10,17 @@ declare(strict_types=1);
 final class ProductAdminService
 {
     public const PER_PAGE = 20;
-    public const MAX_IMAGES = 8;
+    public const MAX_IMAGES = 4;
 
     public const LABELS = [
         'name' => 'Product name', 'slug' => 'Web address (slug)', 'sku' => 'SKU / product code',
         'category_id' => 'Category', 'short_description' => 'Short description', 'description' => 'Description',
-        'price' => 'Price', 'low_stock_threshold' => 'Low-stock alert level', 'initial_stock' => 'Opening stock',
+        'price' => 'Price', 'sale_price' => 'Sale price', 'low_stock_threshold' => 'Low-stock alert level', 'initial_stock' => 'Opening stock',
+        'custom_label' => 'Question for the customer', 'custom_max_length' => 'Longest message',
     ];
+
+    /** Shown above the message box when the administrator leaves the question empty. */
+    public const DEFAULT_CUSTOM_LABEL = 'Your personalised message';
 
     /**
      * Product list for the admin table.
@@ -55,7 +59,8 @@ final class ProductAdminService
         $pages = max(1, (int) ceil($total / self::PER_PAGE));
         $page = min(max(1, (int) ($filters['page'] ?? 1)), $pages);
         $items = Database::fetchAll(
-            "SELECT p.id, p.name, p.slug, p.sku, p.price, p.stock_quantity, p.low_stock_threshold, p.is_active, p.is_featured,
+            "SELECT p.id, p.name, p.slug, p.sku, p.price, p.compare_at_price, p.stock_quantity, p.low_stock_threshold, p.is_active, p.is_featured,
+                    p.is_customizable,
                     p.updated_at, c.name AS category_name,
                     (SELECT pi.file_name FROM product_images pi WHERE pi.product_id = p.id
                       ORDER BY pi.is_primary DESC, pi.sort_order, pi.id LIMIT 1) AS image
@@ -89,8 +94,14 @@ final class ProductAdminService
             'short_description'   => ['max:255'],
             'description'         => ['max:5000'],
             'price'               => ['required', 'decimal', 'min_value:0', 'max_value:9999999.99'],
+            'sale_price'          => ['decimal', 'min_value:0', 'max_value:9999999.99'],
             'low_stock_threshold' => ['required', 'integer', 'min_value:0', 'max_value:9999'],
+            'custom_label'        => ['max:80'],
         ]);
+        $customizable = ($input['is_customizable'] ?? '') === '1';
+        if ($customizable) {
+            $v->rules(['custom_max_length' => ['required', 'integer', 'min_value:10', 'max_value:500']]);
+        }
         if ($id === null) {
             $v->rules(['initial_stock' => ['required', 'integer', 'min_value:0', 'max_value:99999']]);
         }
@@ -112,9 +123,21 @@ final class ProductAdminService
             $v->addError('sku', 'Another product already uses this SKU.');
         }
 
+        // Sale: the customer pays the sale price; the normal price is shown crossed out.
+        $sale = $v->value('sale_price');
+        if ($v->passes() && $sale !== '') {
+            if (CartService::toCents($sale) <= 0) {
+                $v->addError('sale_price', 'Enter a sale price above 0, or leave it empty.');
+            } elseif (CartService::toCents($sale) >= CartService::toCents($v->value('price'))) {
+                $v->addError('sale_price', 'The sale price must be lower than the normal price (' . money($v->value('price')) . ').');
+            }
+        }
+
         $flags = [
-            'is_active'   => ($input['is_active'] ?? '') === '1' ? 1 : 0,
-            'is_featured' => ($input['is_featured'] ?? '') === '1' ? 1 : 0,
+            'is_active'       => ($input['is_active'] ?? '') === '1' ? 1 : 0,
+            'is_featured'     => ($input['is_featured'] ?? '') === '1' ? 1 : 0,
+            'is_customizable' => $customizable ? 1 : 0,
+            'custom_required' => ($input['custom_required'] ?? '') === '1' ? 1 : 0,
         ];
         if (!$v->passes()) {
             return ['errors' => $v->errors(), 'old' => $v->old() + array_map('strval', $flags)];
@@ -127,19 +150,28 @@ final class ProductAdminService
             'slug' => $slug,
             'short' => $v->value('short_description') !== '' ? $v->value('short_description') : null,
             'description' => $v->value('description') !== '' ? $v->value('description') : null,
-            'price' => CartService::fromCents(CartService::toCents($v->value('price'))),
+            'price' => CartService::fromCents(CartService::toCents($sale !== '' ? $sale : $v->value('price'))),
+            'compare' => $sale !== '' ? CartService::fromCents(CartService::toCents($v->value('price'))) : null,
             'threshold' => (int) $v->value('low_stock_threshold'),
             'featured' => $flags['is_featured'],
             'active' => $flags['is_active'],
+            // Personalisation: the settings are kept even when switched off, so they come back if it is switched on again.
+            'customizable' => $flags['is_customizable'],
+            'custom_label' => $v->value('custom_label') !== '' ? $v->value('custom_label') : null,
+            'custom_max' => $customizable ? (int) $v->value('custom_max_length')
+                : max(10, min(500, ctype_digit(trim((string) ($input['custom_max_length'] ?? ''))) ? (int) $input['custom_max_length'] : 100)),
+            'custom_required' => $flags['custom_required'],
         ];
 
         if ($id === null) {
             $initial = (int) $v->value('initial_stock');
             $id = Database::transaction(static function () use ($params, $initial, $adminId): int {
                 $newId = Database::insert(
-                    'INSERT INTO products (category_id, sku, name, slug, short_description, description, price,
-                                           stock_quantity, low_stock_threshold, is_featured, is_active)
-                     VALUES (:category, :sku, :name, :slug, :short, :description, :price, 0, :threshold, :featured, :active)',
+                    'INSERT INTO products (category_id, sku, name, slug, short_description, description, price, compare_at_price,
+                                           stock_quantity, low_stock_threshold, is_featured, is_active,
+                                           is_customizable, custom_label, custom_max_length, custom_required)
+                     VALUES (:category, :sku, :name, :slug, :short, :description, :price, :compare, 0, :threshold, :featured, :active,
+                             :customizable, :custom_label, :custom_max, :custom_required)',
                     $params
                 );
                 if ($initial > 0) {
@@ -147,19 +179,31 @@ final class ProductAdminService
                 }
                 return $newId;
             });
-            ActivityLogService::log($adminId, 'product.create', 'product', $id, $params['name'] . ' @ ' . $params['price']);
+            ActivityLogService::log($adminId, 'product.create', 'product', $id, $params['name'] . ' @ ' . $params['price']
+                . ($params['compare'] !== null ? ' (sale, normally ' . $params['compare'] . ')' : '')
+                . ($params['customizable'] ? ' (personalised)' : ''));
         } else {
             $before = self::find($id);
             Database::execute(
                 'UPDATE products SET category_id = :category, sku = :sku, name = :name, slug = :slug,
-                        short_description = :short, description = :description, price = :price,
-                        low_stock_threshold = :threshold, is_featured = :featured, is_active = :active
+                        short_description = :short, description = :description, price = :price, compare_at_price = :compare,
+                        low_stock_threshold = :threshold, is_featured = :featured, is_active = :active,
+                        is_customizable = :customizable, custom_label = :custom_label, custom_max_length = :custom_max,
+                        custom_required = :custom_required
                   WHERE id = :id',
                 $params + ['id' => $id]
             );
             $changes = [];
             if ($before !== null && CartService::toCents((string) $before['price']) !== CartService::toCents($params['price'])) {
                 $changes[] = 'price ' . CartService::fromCents(CartService::toCents((string) $before['price'])) . ' -> ' . $params['price'];
+            }
+            $beforeCompare = $before !== null && $before['compare_at_price'] !== null ? CartService::toCents((string) $before['compare_at_price']) : null;
+            $afterCompare = $params['compare'] !== null ? CartService::toCents($params['compare']) : null;
+            if ($before !== null && $beforeCompare !== $afterCompare) {
+                $changes[] = $afterCompare === null ? 'sale ended' : 'on sale, normally ' . $params['compare'];
+            }
+            if ($before !== null && (int) ($before['is_customizable'] ?? 0) !== $params['customizable']) {
+                $changes[] = $params['customizable'] ? 'personalisation on' : 'personalisation off';
             }
             if ($before !== null && (int) $before['is_active'] !== $params['active']) {
                 $changes[] = $params['active'] ? 'activated' : 'deactivated';
@@ -250,6 +294,55 @@ final class ProductAdminService
             'SELECT * FROM product_images WHERE product_id = :id ORDER BY is_primary DESC, sort_order ASC, id ASC',
             ['id' => $productId]
         );
+    }
+
+    /**
+     * Turn $_FILES['images'] (several files) or $_FILES['image'] (one file)
+     * into a simple list of single-file arrays, skipping empty choices.
+     */
+    public static function uploadedFiles(mixed $multi, mixed $single = null): array
+    {
+        $files = [];
+        if (is_array($multi) && is_array($multi['name'] ?? null)) {
+            foreach (array_keys($multi['name']) as $i) {
+                $file = [];
+                foreach (['name', 'type', 'tmp_name', 'error', 'size'] as $key) {
+                    $file[$key] = $multi[$key][$i] ?? null;
+                }
+                if (!is_array($file['name']) && ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+                    $files[] = $file;
+                }
+            }
+        }
+        if (is_array($single) && !is_array($single['name'] ?? null) && ($single['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            $files[] = $single;
+        }
+        return $files;
+    }
+
+    /**
+     * Upload several images (up to the free places). Returns
+     * ['added' => int, 'errors' => [message, ...]].
+     */
+    public static function addImages(int $productId, array $files, string $altText, int $adminId): array
+    {
+        $added = 0;
+        $errors = [];
+        foreach ($files as $i => $file) {
+            $count = (int) Database::fetchValue('SELECT COUNT(*) FROM product_images WHERE product_id = :id', ['id' => $productId]);
+            if ($count >= self::MAX_IMAGES) {
+                $errors[] = (count($files) - $i) . ' photo(s) not added: a product can have up to ' . self::MAX_IMAGES . ' photos.';
+                break;
+            }
+            $error = self::addImage($productId, $file, $altText, $adminId);
+            if ($error === null) {
+                $added++;
+            } else {
+                $name = is_string($file['name'] ?? null) ? basename($file['name']) : 'photo ' . ($i + 1);
+                $errors[] = mb_substr($name, 0, 60) . ': ' . $error;
+            }
+        }
+        return ['added' => $added, 'errors' => $errors];
     }
 
     /** Upload an image for a product. Returns an error message or null. */

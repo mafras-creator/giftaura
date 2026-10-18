@@ -36,7 +36,7 @@ final class CustomerAdminService
         $pages = max(1, (int) ceil($total / self::PER_PAGE));
         $page = min(max(1, (int) ($filters['page'] ?? 1)), $pages);
         $items = Database::fetchAll(
-            "SELECT u.id, u.full_name, u.email, u.phone, u.is_active, u.created_at, u.last_login_at,
+            "SELECT u.id, u.full_name, u.email, u.phone, u.is_active, u.email_verified_at, u.created_at, u.last_login_at,
                     (SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id) AS order_count,
                     " . self::SPENT_SQL . " AS total_spent
                FROM users u
@@ -51,7 +51,7 @@ final class CustomerAdminService
     public static function find(int $id): ?array
     {
         return Database::fetchOne(
-            "SELECT u.id, u.full_name, u.email, u.phone, u.is_active, u.created_at, u.last_login_at,
+            "SELECT u.id, u.full_name, u.email, u.phone, u.is_active, u.email_verified_at, u.created_at, u.last_login_at,
                     (SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id) AS order_count,
                     " . self::SPENT_SQL . " AS total_spent
                FROM users u WHERE u.id = :id AND u.role = 'customer'",

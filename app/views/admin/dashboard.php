@@ -11,6 +11,10 @@ $cards = [
     ['Low / out of stock', $summary['low_stock'] . ' / ' . $summary['out_of_stock'], 'Active products needing stock', ($summary['low_stock'] + $summary['out_of_stock']) > 0 ? 'stat-card--danger' : '', 'admin/inventory.php', []],
 ];
 ?>
+<?php $failedEmails = EmailService::failedCount(); if ($failedEmails > 0): ?>
+    <div class="alert alert--error"><span><?= e((string) $failedEmails) ?> e-mail(s) could not be sent in the last 7 days.
+        <a href="<?= e(url('admin/emails.php', ['status' => 'failed'])) ?>">Open the e-mail log</a></span></div>
+<?php endif; ?>
 <p class="admin-lead">All figures are read live from the database. Sales exclude cancelled orders and refunded payments.</p>
 
 <section class="stat-grid" aria-label="Store summary">

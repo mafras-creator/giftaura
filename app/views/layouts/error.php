@@ -11,14 +11,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex">
     <title><?= e(($title ?? 'Error') . ' | GiftAura') ?></title>
-    <link rel="icon" href="<?= e(asset('img/logo.svg')) ?>" type="image/svg+xml">
+    <link rel="icon" href="<?= e(BrandService::logoUrl()) ?>" type="<?= e(BrandService::logoType()) ?>">
     <link rel="stylesheet" href="<?= e(asset('css/shop.css')) ?>">
 </head>
 <body class="error-body">
 <main class="error-page">
     <a class="brand brand--center" href="<?= e(url()) ?>">
-        <img class="brand__mark" src="<?= e(asset('img/logo.svg')) ?>" alt="" width="48" height="48">
-        <span class="brand__name">GiftAura</span>
+        <?php $wideLogo = BrandService::isWide(); ?>
+        <img class="brand__mark<?= BrandService::hasCustomLogo() ? ' brand__mark--custom' : '' ?><?= $wideLogo ? ' brand__mark--wide' : '' ?>"
+             src="<?= e(BrandService::logoUrl()) ?>" alt="<?= $wideLogo ? 'GiftAura' : '' ?>" height="48"<?= $wideLogo ? '' : ' width="48"' ?>>
+        <?php if (!$wideLogo): ?><span class="brand__name">GiftAura</span><?php endif; ?>
     </a>
     <?= $content ?>
 </main>

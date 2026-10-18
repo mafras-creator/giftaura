@@ -1,7 +1,7 @@
 <?php
 /**
  * Product listing with category navigation, search and filters.
- * Variables: $heading, $category, $trail, $tree, $q, $min, $max, $inStock,
+ * Variables: $heading, $category, $trail, $tree, $q, $min, $max, $inStock, $onSale,
  *            $sort, $result, $filters, $priceRange, $notices.
  */
 $total = $result['total'];
@@ -95,6 +95,10 @@ $activeSlug = $category['slug'] ?? '';
                 <label class="checkbox">
                     <input type="checkbox" name="in_stock" value="1"<?= $inStock ? ' checked' : '' ?>>
                     <span>In stock only</span>
+                </label>
+                <label class="checkbox">
+                    <input type="checkbox" name="sale" value="1"<?= $onSale ? ' checked' : '' ?>>
+                    <span>On sale only</span>
                 </label>
 
                 <button type="submit" class="btn btn--primary btn--block">Apply filters</button>

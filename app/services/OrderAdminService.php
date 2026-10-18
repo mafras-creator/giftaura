@@ -63,7 +63,8 @@ final class OrderAdminService
         $items = Database::fetchAll(
             "SELECT o.id, o.order_number, o.status, o.customer_name, o.customer_phone, o.district, o.total_amount, o.created_at,
                     p.method AS payment_method, p.status AS payment_status,
-                    (SELECT SUM(oi.quantity) FROM order_items oi WHERE oi.order_id = o.id) AS units
+                    (SELECT SUM(oi.quantity) FROM order_items oi WHERE oi.order_id = o.id) AS units,
+                    (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.id AND oi.customization_text IS NOT NULL) AS custom_items
                {$from}
               WHERE {$whereSql}
               ORDER BY o.created_at DESC, o.id DESC
@@ -103,6 +104,7 @@ final class OrderAdminService
         if ($error === null) {
             ActivityLogService::log($adminId, 'order.status', 'order', $orderId,
                 $order['order_number'] . ': ' . $order['status'] . ' -> ' . $newStatus . ($note !== '' ? ' (' . $note . ')' : ''));
+            EmailService::orderStatusChanged($orderId, $newStatus, $note !== '' ? $note : null);
         }
         return $error;
     }
@@ -153,6 +155,7 @@ final class OrderAdminService
         } catch (CheckoutException $e) {
             return $e->getMessage();
         }
+        EmailService::paymentChanged($orderId, $newStatus);
         return null;
     }
 

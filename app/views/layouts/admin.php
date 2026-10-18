@@ -13,9 +13,13 @@ $menu = [
     ['admin/orders.php', 'admin/orders.php', 'Orders', ['admin/order.php']],
     ['admin/products.php', 'admin/products.php', 'Products', ['admin/product-edit.php']],
     ['admin/categories.php', 'admin/categories.php', 'Categories', []],
+    ['admin/banners.php', 'admin/banners.php', 'Banners', []],
+    ['admin/about.php', 'admin/about.php', 'About page', []],
     ['admin/inventory.php', 'admin/inventory.php', 'Inventory', []],
     ['admin/customers.php', 'admin/customers.php', 'Customers', ['admin/customer.php']],
+    ['admin/reviews.php', 'admin/reviews.php', 'Reviews', []],
     ['admin/reports.php', 'admin/reports.php', 'Reports', []],
+    ['admin/emails.php', 'admin/emails.php', 'E-mail log', []],
     ['admin/activity.php', 'admin/activity.php', 'Activity log', []],
     ['admin/settings.php', 'admin/settings.php', 'Settings', []],
 ];
@@ -28,7 +32,7 @@ $pendingCount = (int) Database::fetchValue("SELECT COUNT(*) FROM orders WHERE st
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title><?= e(($title ?? 'Admin') . ' | ' . $storeName . ' Admin') ?></title>
-    <link rel="icon" href="<?= e(asset('img/logo.svg')) ?>" type="image/svg+xml">
+    <link rel="icon" href="<?= e(BrandService::logoUrl()) ?>" type="<?= e(BrandService::logoType()) ?>">
     <link rel="stylesheet" href="<?= e(asset('css/admin.css')) ?>">
     <script src="<?= e(asset('js/admin.js')) ?>" defer></script>
 </head>
@@ -37,9 +41,10 @@ $pendingCount = (int) Database::fetchValue("SELECT COUNT(*) FROM orders WHERE st
 
 <div class="admin-shell">
     <aside class="admin-sidebar" id="admin-sidebar" aria-label="Admin navigation">
-        <a class="admin-brand" href="<?= e(url('admin/')) ?>">
-            <img src="<?= e(asset('img/logo.svg')) ?>" alt="" width="34" height="34">
-            <span><?= e($storeName) ?><small>Administration</small></span>
+        <a class="admin-brand<?= BrandService::isWide() ? ' admin-brand--wide' : '' ?>" href="<?= e(url('admin/')) ?>">
+            <img class="admin-brand__logo<?= BrandService::hasCustomLogo() ? ' admin-brand__logo--custom' : '' ?><?= BrandService::isWide() ? ' admin-brand__logo--wide' : '' ?>"
+                 src="<?= e(BrandService::logoUrl()) ?>" alt="" height="34"<?= BrandService::isWide() ? '' : ' width="34"' ?>>
+            <span><?= BrandService::isWide() ? '' : e($storeName) ?><small>Administration</small></span>
         </a>
         <nav>
             <ul class="admin-menu">

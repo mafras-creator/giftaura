@@ -38,6 +38,7 @@ giftaura/
 │   │   ├── Flash.php         one-time messages
 │   │   ├── ImageUploader.php secure upload + GD re-encode
 │   │   ├── Logger.php        log files without secrets
+│   │   ├── Mailer.php        sends e-mail: test mode (files), Gmail SMTP, or off
 │   │   ├── RateLimiter.php   login attempt limits
 │   │   ├── Session.php       hardened session, idle timeout
 │   │   ├── Validator.php     server-side validation rules
@@ -59,14 +60,23 @@ giftaura/
 │   │   ├── ReportService.php          reports and CSV rows
 │   │   ├── DashboardService.php       dashboard figures
 │   │   ├── ActivityLogService.php     admin audit trail
-│   │   └── CheckoutException.php      customer-fixable error inside a transaction
+│   │   ├── CheckoutException.php      customer-fixable error inside a transaction
+│   │   ├── TokenService.php           one-time e-mail links (hashed, expiring, single use)
+│   │   ├── BannerService.php          homepage banners: rules, dates, safe links
+│   │   ├── WishlistService.php        heart button: save/remove, pending add after login
+│   │   ├── BrandService.php           uploaded shop logo (no database needed)
+│   │   ├── AboutService.php           About page texts (storage/content/about.json)
+│   │   ├── PopularService.php         homepage "Popular categories" tiles (storage/content/popular.json)
+│   │   └── EmailService.php           which e-mails are sent, e-mail log
 │   └── views/
-│       ├── layouts/          shop.php, admin.php, error.php
+│       ├── layouts/          shop.php, admin.php, error.php, email.php
 │       ├── partials/         product-card, pagination, account-nav, order-progress, bank-details, movement-list
 │       ├── shop/             home, products, product, cart, checkout, order-confirmation, track-order,
-│       │                     login, register, about, contact, account/{profile,password,orders,order,addresses}
+│       │                     login, register, about, contact, verify-email, forgot-password, reset-password,
+│       │                     account/{profile,password,orders,order,addresses}
+│       ├── emails/           verify-email, reset-password, order-placed, order-status, payment, test, _button
 │       ├── admin/            dashboard, orders, order, products, product-edit, categories, inventory,
-│       │                     customers, customer, reports, activity, settings
+│       │                     customers, customer, reports, banners, emails, activity, settings
 │       └── errors/           403, 404, 500, generic
 │
 ├── config/
@@ -76,34 +86,47 @@ giftaura/
 ├── public/
 │   ├── index.php · products.php · product.php · cart.php · checkout.php · order-confirmation.php
 │   ├── track-order.php · login.php · register.php · logout.php · about.php · contact.php · 403.php · 404.php
-│   ├── account/              index.php (profile) · password.php · orders.php · order.php · addresses.php
+│   ├── verify-email.php · resend-verification.php · forgot-password.php · reset-password.php · wishlist.php
+│   ├── account/              index.php (profile) · password.php · orders.php · order.php · addresses.php · wishlist.php
 │   ├── admin/                index.php (dashboard) · orders.php · order.php · products.php · product-edit.php
 │   │                         categories.php · inventory.php · customers.php · customer.php
-│   │                         reports.php · report-export.php · activity.php · settings.php
+│   │                         banners.php · reports.php · report-export.php · emails.php · activity.php · settings.php
 │   ├── assets/
 │   │   ├── css/              shop.css · admin.css
 │   │   ├── js/               shop.js · admin.js
 │   │   └── img/              logo.svg · placeholder-product.svg
 │   └── uploads/
 │       ├── .htaccess         PHP disabled, only jpg/png/webp served
-│       └── products/         uploaded product photos (random names, not in Git)
+│       ├── products/         uploaded product photos (random names, not in Git)
+│       ├── banners/          homepage banner pictures
+│       ├── categories/       round category pictures
+│       ├── brand/            uploaded shop logo
+│       └── people/           founder photo (About page)
 │
 ├── scripts/
 │   ├── setup.php             checks PHP, tests the database, writes config/config.php
 │   ├── create_admin.php      creates an administrator (command line only)
-│   ├── system_check.php      43 checks on the real server (Phase 8)
+│   ├── system_check.php      50 checks on the real server (43 in Phase 8 + 6 e-mail checks + DB-13 columns)
+│   ├── setup_mail.php        choose e-mail mode: test mode, Gmail (App Password) or off
+│   ├── test_mail.php         sends one test e-mail and shows the conversation with the server
 │   ├── backup.bat            database + photo backup with date in the file name
 │   └── build_diagrams.php    rebuilds docs/diagrams.html from the Mermaid diagrams in docs/
 │
 ├── sql/
 │   ├── 00_create_database_and_user.sql   database + least-privilege user
-│   ├── schema.sql                        15 tables, keys, constraints
-│   └── seed.sql                          settings, categories, SAMPLE products
+│   ├── schema.sql                        20 tables, keys, constraints
+│   ├── seed.sql                          settings, categories, SAMPLE products
+│   └── updates/                          2026-10-17_email.sql, _banners.sql, _sale_wishlist.sql, 2026-10-18_customization.sql, 2026-10-18_reviews.sql (existing databases)
 │
-├── storage/logs/             app-YYYY-MM-DD.log
+├── storage/
+│   ├── logs/                 app-YYYY-MM-DD.log
+│   ├── mail/                 e-mails saved in test mode (not in Git, blocked from the browser)
+│   └── content/              about.json (About page texts, edited in the admin panel)
 │
 ├── tests/                    schema_sqlite.sql, reset_test_db.php, test_router.php,
-│                             shop_e2e.sh (54 checks), admin_e2e.sh (106 checks), README.md
+│                             shop_e2e.sh (58 checks), admin_e2e.sh (107 checks), email_e2e.sh (69 checks),
+│                             banner_e2e.sh (91 checks), sale_wishlist_e2e.sh (36 checks), custom_e2e.sh (48 checks), review_e2e.sh (52 checks), email_unit.php (17 checks), fake_smtp.php,
+│                             make_fixtures.php, README.md
 │
 └── docs/
     ├── 01-requirements.md        functional / non-functional requirements, business rules, status
@@ -112,8 +135,8 @@ giftaura/
     ├── 04-file-structure.md      this file
     ├── 05-use-cases-and-flows.md use-case diagram and system flow diagrams
     ├── diagrams.html             all 12 diagrams as pictures (open from disk)
-    ├── security-checklist.md     38 controls, how to test them, limitations
-    ├── test-plan.md              test levels, results, 25 manual tests, traceability, defects
+    ├── security-checklist.md     53 controls (38 + 13 e-mail + 2 banners), how to test them, limitations
+    ├── test-plan.md              test levels, results, 39 manual tests, traceability, defects
     ├── admin-guide.md            how to run the store
     ├── customer-guide.md         how to shop
     ├── troubleshooting.md        common problems and fixes
@@ -152,3 +175,7 @@ giftaura/
 | `admin/activity.php` | `ActivityLogService` | admin_activity_log |
 | `admin/settings.php` | `SettingsService` | settings |
 | `login.php` | `Auth`, `RateLimiter` | users, login_attempts |
+| `register.php`, `verify-email.php`, `resend-verification.php` | `UserService`, `TokenService`, `EmailService` | users, user_tokens, email_log |
+| `forgot-password.php`, `reset-password.php` | `EmailService`, `TokenService`, `UserService` | users, user_tokens, email_log |
+| `admin/emails.php` | `EmailService` | email_log, orders |
+| `admin/banners.php`, `index.php` (slider) | `BannerService`, `ImageUploader` | banners |

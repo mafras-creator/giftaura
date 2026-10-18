@@ -245,6 +245,89 @@ The Phase 5 shop tests (`tests/shop_e2e.sh`) were re-run on the Phase 6 code: **
 - `docs/diagrams.html` rebuilt with 12 diagrams. The Mermaid diagrams could not be rendered in the build workspace (no browser or internet access), so they are to be checked visually by opening `docs/diagrams.html` on the laptop.
 - `scripts/backup.bat` could not be run in the build workspace (Windows-only); it is to be run once on the laptop.
 
+## E-mail extension — verification, password reset, order e-mails (17 Oct 2026)
+
+Requested after Phase 9: "customer Gmail verification" and an e-mail when an order is placed or completed. Decisions agreed with the student: block **checkout** (not login) until the e-mail is verified; built-in Gmail sender with **test mode** as the default; add **"Forgotten password?"** by e-mail.
+
+### Files
+| Status | Files |
+|---|---|
+| New | `app/core/Mailer.php`, `app/services/TokenService.php`, `app/services/EmailService.php`, `app/views/layouts/email.php`, `app/views/emails/*` (7), `app/views/shop/{verify-email,forgot-password,reset-password}.php`, `app/views/admin/emails.php`, `public/{verify-email,resend-verification,forgot-password,reset-password}.php`, `public/admin/emails.php`, `scripts/setup_mail.php`, `scripts/test_mail.php`, `sql/updates/2026-10-17_email.sql`, `storage/mail/.gitkeep`, `tests/{email_e2e.sh,email_unit.php,fake_smtp.php,make_fixtures.php}` |
+| Updated | `sql/schema.sql` (17 tables), `config/config.example.php` (`site_url`, `mail`), `scripts/setup.php` (keeps mail settings), `scripts/system_check.php` (MAIL-01 – 06), `app/core/{Auth,View}.php`, `app/helpers.php` (`absolute_url`), `UserService`, `OrderService`, `OrderAdminService`, `CustomerAdminService`, shop and admin layouts, cart, checkout, login, register, admin customer pages, dashboard, `shop.css`, `.gitignore`, tests, all documents |
+
+### Tests run by Claude (Linux workspace, PHP 8.3, SQLite copy of the schema, real pages over HTTP)
+- `php -l` on every PHP file: no errors.
+- `tests/email_unit.php`: **17 passed, 0 failed**. `tests/email_e2e.sh`: **69 passed, 0 failed** (includes SMTP against `tests/fake_smtp.php`: accepted login, wrong password, unreachable server).
+- Regression: `tests/shop_e2e.sh` **58 passed** (54 + 4 new), `tests/admin_e2e.sh` **107 passed** (106 + 1 new), 0 failed, on a fresh copy; no errors in the application log.
+- Three defects found and fixed during these tests (D-05 – D-07 in the test plan).
+- The update script's "mark existing accounts verified" rule was checked on SQLite (run twice: old account verified, new unverified account untouched).
+- Pages and e-mails were viewed in Chromium (cart with the verification notice, forgotten-password page on a phone width, order and payment e-mails).
+
+### Not tested by Claude (needs the laptop)
+- Real sending through Gmail (no internet access to Gmail from the workspace), the MariaDB update script, `system_check.php` (49 checks), and the ER diagram rendering — manual tests **M-26 – M-34**.
+
+## Design refresh — homepage banners and new shop look (17 Oct 2026)
+
+Requested by the student with reference screenshots of a large Sri Lankan gift shop: purple header with a big search bar and yellow search button, "All categories" menu, a banner section **managed from the admin panel**, round category pictures, product grids and a **yellow Add to cart** button. Only the layout ideas were used; no names, logos, pictures or text were copied.
+
+### Files
+| Status | Files |
+|---|---|
+| New | `app/services/BannerService.php`, `public/admin/banners.php`, `app/views/admin/banners.php`, `sql/updates/2026-10-17_banners.sql`, `public/uploads/{banners,categories}/.gitkeep`, `tests/banner_e2e.sh` |
+| Updated | `app/core/ImageUploader.php` (upload folders), `CategoryService` (pictures), `CategoryAdminService` + categories admin page (picture upload), shop layout (new header), `home.php`, `product.php`, product card, `shop.css`, `shop.js` (menu, slider), `admin.css`, admin menu, `sql/schema.sql` (18 tables), `scripts/system_check.php` (DB-02 = 18), `scripts/backup.bat` (pictures zip), `tests/{schema_sqlite.sql,test_router.php,make_fixtures.php}`, documents |
+
+### Tests run by Claude
+- `tests/banner_e2e.sh`: **60 passed, 0 failed** (after fixing D-08). Regression on the same code: unit 17/17, shop 58/58, admin 107/107, e-mail 69/69; no errors in the log.
+- Screenshots in Chromium at 1366 px and 390 px of the homepage, menu, product page and Admin → Banners; two layout problems found and fixed (banner text unreadable on phones → text moved under the picture; admin banner table too wide).
+
+### Not tested by Claude (needs the laptop)
+- MariaDB update script, `backup.bat` change (Windows only), real banner pictures, Chrome check — manual tests **M-35 – M-39**.
+
+## Sale prices and wishlist (17 Oct 2026)
+
+Requested: show a crossed-out old price next to the new price on discounted products (e.g. cake 2000 → 1500), and a wishlist heart on every product picture.
+
+- **Design decision:** `products.price` stays the price the customer pays; the new column `compare_at_price` holds the normal price while on sale. Cart, checkout, orders and reports therefore need no change and can never charge the crossed-out price.
+- New: `WishlistService`, `wishlist_items` table, `public/wishlist.php`, `account/wishlist.php`, partials `price` and `wishlist-button`, `sale_info()` helper, `sql/updates/2026-10-17_sale_wishlist.sql`, `tests/sale_wishlist_e2e.sh`. Updated: product admin (normal + sale price fields, list), `ProductService` (columns, On sale filter), product card, product page, header (Wishlist + count, On sale link), account menu, login/register (pending heart), CSS, schema (19 tables), system check, documents.
+- **Tests run by Claude:** `sale_wishlist_e2e.sh` **36/36**; regression unit 17, shop 58, admin 107, e-mail 69, design 60 — all passed, no errors logged. Screenshots at desktop and phone width checked.
+- **Pending on the laptop:** update SQL, M-40 – M-41.
+
+## Logo upload (18 Oct 2026)
+
+Admin → Settings → **Logo**: upload a PNG/JPG/WebP (ImageUploader folder `brand`), used in the shop header, admin sidebar, error pages and browser tab; wide logos hide the name text; **Use the default logo** resets. File-based (`BrandService`), so no database update is needed. `backup.bat` now also saves `public\uploads\brand`. Tests: `banner_e2e.sh` 70/70 (10 new logo checks); all other suites passed on the same code; header, phone and admin sidebar checked in screenshots (one layout fix: label under a wide logo in the admin sidebar).
+
+## About page (18 Oct 2026)
+
+Rebuilt from the student's reference screenshots: hero (logo, location pill, two-colour headline, live numbers), our story with founder card (**Asjadh Mohamed Mafras**, photo or initials, quote), mission and vision cards, "what we offer" (categories + real shop features), and "Visit us" for **Bandarakoswatta, Kurunegala** with an embedded Google map (CSP allows `frame-src https://www.google.com` on this page only). Texts were written as a **draft** and are edited in **Admin → About page** (`AboutService`, JSON in `storage/content`, founder photo in `uploads/people`) — no invented figures, no database change. `backup.bat` also saves the founder photo and `about.json`. Tests: `banner_e2e.sh` 83/83 (13 new About checks), all other suites passed; desktop, phone and editor screenshots checked (one padding fix). The map itself could not load in Claude's workspace (no internet) — check on the laptop.
+
+## Footer and Popular categories (18 Oct 2026)
+
+- Footer: categories in two columns (first 12 by display order + "View all N categories" and "On sale"); new **Customer care** column. Fixes the very tall footer with 18 categories.
+- Homepage **Popular categories** mosaic (from the student's reference): pastel tiles with a short line, category name and round picture; chosen in Admin → Categories (`PopularService`, `storage/content/popular.json`, no database change).
+- Tests: `banner_e2e.sh` 91/91, all other suites passed; desktop and phone screenshots checked (two layout fixes: picture overlapping long names; "Shop now" hidden on phones).
+
+## Personalised products (18 Oct 2026)
+
+Requested with screenshots of a gift shop that shows "Personalizable" on product cards: the administrator marks a product as customisable; the customer types a message that is ordered with the product.
+
+- **Database:** `products.is_customizable`, `custom_label`, `custom_max_length`, `custom_required`; `cart_items.customization_text`; `order_items.customization_text` (snapshot). Update script `sql/updates/2026-10-18_customization.sql` (3 blocks, still 19 tables). `system_check.php` DB-13 checks the columns (50 checks).
+- **Admin:** Personalisation box in the product form (tick box, question, longest message 10–500, required); "Personalised" in the product list; personalised orders flagged in the order list; message shown under the item on the order page.
+- **Shop:** "Personalisable" label and **Personalise** button on cards; message box with live character counter on the product page; message shown and editable in the cart; kept when a guest logs in; checkout summary, confirmation, My order page and order e-mail show it.
+- **Rules:** message cleaned on the server and always escaped; included in the checkout fingerprint; re-checked inside the order transaction; one message per product per order (adding again replaces it).
+- **Tests run by Claude:** `custom_e2e.sh` **48/48**; regression on a fresh copy: unit 17, shop 58, admin 107, e-mail 69, banner 91, sale/wishlist 36 — all passed, no errors logged. Desktop and phone screenshots checked.
+- **Pending on the laptop:** update SQL, M-42.
+
+## Product reviews (18 Oct 2026)
+
+Requested with a screenshot of a gift shop's "Reviews (2)" section: a customer whose order was delivered can review the product from their account, and the review is shown under the product.
+
+- **Database:** new table `product_reviews` (20 tables) — `sql/updates/2026-10-18_reviews.sql`; system check DB-02 now expects 20.
+- **Customer:** My account → **My reviews** (waiting / written), star picker (works without JavaScript), optional comment with counter, edit and delete; "Write a review" links on delivered orders; the "delivered" e-mail invites a review.
+- **Shop:** "Customer reviews (N)" section under every product (average, stars, bars per star, first name + initial, Verified purchase, 5 per page); rating next to the price; stars and count on product cards.
+- **Admin:** Admin → **Reviews** (search, star and status filters, Hide/Show, Delete; activity log).
+- **Tests run by Claude:** `review_e2e.sh` **52/52**; all other suites passed on one fresh copy (17, 58, 107, 69, 91, 36, 48); no errors logged. Screenshots at desktop and phone width checked.
+- **Pending on the laptop:** update SQL, M-43.
+
 ## Project deliverables (from the project brief) → where they are
 
 | # | Deliverable | Location |
@@ -263,4 +346,8 @@ The Phase 5 shop tests (`tests/shop_e2e.sh`) were re-run on the Phase 6 code: **
 | 12 | Customer user guide | `docs/customer-guide.md` |
 | 13 | Security checklist | `docs/security-checklist.md` |
 | 14 | Deployment and backup instructions | `docs/deployment-and-backup.md`, `scripts/backup.bat` |
+| + | E-mail extension (verification, password reset, notifications) | see sections above; `docs/test-plan.md` §5.5 and M-26 – M-34 |
+| + | Design refresh and admin-managed banners | see sections above; `docs/test-plan.md` §5.6 and M-35 – M-39 |
 | — | Screenshots and demonstration preparation | `docs/demo-script.md` (screenshot list, script, viva questions) |
+
+**Tested on the laptop (17 Oct 2026):** `docs/diagrams.html` showed all 12 diagrams; `scripts/backup.bat` created the database backup successfully. **Project complete.**

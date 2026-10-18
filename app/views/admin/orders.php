@@ -50,7 +50,7 @@ $base = array_diff_key($filters, ['status' => 1]);
                     <tr>
                         <td><a href="<?= e(url('admin/order.php', ['id' => $o['id']])) ?>"><strong><?= e($o['order_number']) ?></strong></a><br><small class="muted"><?= e(format_datetime($o['created_at'])) ?></small></td>
                         <td><?= e($o['customer_name']) ?><br><small class="muted"><?= e($o['customer_phone']) ?> · <?= e($o['district']) ?></small></td>
-                        <td class="num"><?= e((string) (int) $o['units']) ?></td>
+                        <td class="num"><?= e((string) (int) $o['units']) ?><?php if ((int) ($o['custom_items'] ?? 0) > 0): ?><br><span class="badge badge--neutral" title="Contains a personalised item">Personalised</span><?php endif; ?></td>
                         <td><?= order_status_badge($o['status']) ?></td>
                         <td><?= e(PaymentService::METHODS[$o['payment_method']] ?? '') ?><br><?= payment_status_badge($o['payment_status']) ?></td>
                         <td class="num"><?= e(money($o['total_amount'])) ?></td>

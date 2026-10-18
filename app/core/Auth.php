@@ -97,7 +97,7 @@ final class Auth
             return null;
         }
         $user = Database::fetchOne(
-            'SELECT id, role, full_name, email, phone, created_at, last_login_at
+            'SELECT id, role, full_name, email, phone, email_verified_at, created_at, last_login_at
                FROM users WHERE id = :id AND is_active = 1',
             ['id' => $id]
         );

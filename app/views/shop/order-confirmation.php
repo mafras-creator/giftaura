@@ -13,7 +13,7 @@
             <h2 class="panel__title">Summary</h2>
             <ul class="summary-lines">
                 <?php foreach ($items as $item): ?>
-                    <li><span><?= e($item['product_name']) ?> <span class="muted">&times; <?= e((string) $item['quantity']) ?></span></span><span><?= e(money($item['line_total'])) ?></span></li>
+                    <li><span><?= e($item['product_name']) ?> <span class="muted">&times; <?= e((string) $item['quantity']) ?></span></span><span><?= e(money($item['line_total'])) ?></span><?= View::partial('custom-note', ['text' => (string) ($item['customization_text'] ?? '')]) ?></li>
                 <?php endforeach; ?>
             </ul>
             <dl class="totals">

@@ -5,6 +5,8 @@ q(){ php -r '$p=new PDO("sqlite:test.db"); foreach($p->query($argv[1])->fetchAll
 tok(){ curl -s -c $1 -b $1 "$B/$2" | grep -o 'name="_csrf" value="[^"]*"' | head -1 | sed 's/.*value="//;s/"//'; }
 post(){ local jar=$1 path=$2; shift 2; local T=$(tok $jar "${TOKPAGE:-$path}"); curl -s -c $jar -b $jar -o /dev/null -w '%{http_code} %{redirect_url}' --data-urlencode "_csrf=$T" "$@" "$B/$path"; }
 page(){ curl -s -c $1 -b $1 "$B/$2"; }
+mtoken(){ local f=$(ls -t ../storage/mail/*.html 2>/dev/null | xargs -r grep -l -- "$1" | xargs -r grep -l "$2" | head -1); [ -n "$f" ] && grep -o "$2?token=[a-f0-9]*" "$f" | head -1 | sed "s/.*token=//"; }
+verify(){ local T=$(mtoken $2 verify-email.php); TOKPAGE="verify-email.php?token=$T" post $1 verify-email.php -d token=$T >/dev/null; }
 pass=0; fail=0
 check(){ if [ "$2" == "$3" ]; then pass=$((pass+1)); echo "  ok   $1"; else fail=$((fail+1)); echo "  FAIL $1: expected [$3] got [$2]"; fi; }
 
@@ -33,6 +35,13 @@ echo "== Register merges cart"
 TOKPAGE=register.php post $G register.php -d full_name=Nimal%20Perera -d email=nimal@example.com -d phone=0771234567 -d password=secret123 -d password_confirm=secret123 >/dev/null
 check "saved cart lines after register" "$(q "SELECT COUNT(*) FROM cart_items")" "2"
 check "session cart emptied/merged count" "$(page $G cart.php | grep -o 'Subtotal ([0-9]* items)')" "Subtotal (3 items)"
+
+echo "== E-mail verification before checkout"
+check "unverified: checkout -> cart" "$(curl -s -o /dev/null -w '%{redirect_url}' -b $G $B/checkout.php)" "$B/cart.php"
+check "unverified: cart shows notice" "$(page $G cart.php | grep -c 'Please verify your e-mail address before checking out')" "1"
+check "verification e-mail saved" "$(q "SELECT template||'|'||status FROM email_log WHERE recipient='nimal@example.com'")" "verify_email|saved"
+verify $G nimal@example.com
+check "verified after link" "$(q "SELECT email_verified_at IS NOT NULL FROM users WHERE email='nimal@example.com'")" "1"
 
 echo "== Checkout validation"
 CO=$(page $G checkout.php)
@@ -74,6 +83,7 @@ check "order history lists it" "$(page $G account/orders.php | grep -q ">$ON</a>
 echo "== Another customer cannot see it"
 H=other.jar
 TOKPAGE=register.php post $H register.php -d full_name=Other%20Person -d email=other@example.com -d phone=0722222222 -d password=secret123 -d password_confirm=secret123 >/dev/null
+verify $H other@example.com
 check "other: order page 404" "$(curl -s -o /dev/null -w '%{http_code}' -b $H "$B/account/order.php?order=$ON")" "404"
 check "other: confirmation 404" "$(curl -s -o /dev/null -w '%{http_code}' -b $H "$B/order-confirmation.php?order=$ON")" "404"
 check "other: cannot cancel" "$(TOKPAGE=account/orders.php post $H "account/order.php?order=$ON" -d action=cancel | cut -d' ' -f1)" "404"

@@ -41,6 +41,15 @@ function url(string $path = '', array $query = []): string
     return $result;
 }
 
+/**
+ * Full URL for links inside e-mails, e.g.
+ * absolute_url('verify-email.php', ['token' => 'x']) -> http://localhost/giftaura/verify-email.php?token=x
+ */
+function absolute_url(string $path = '', array $query = []): string
+{
+    return rtrim((string) config('app.site_url', 'http://localhost'), '/') . url($path, $query);
+}
+
 /** URL of a file in public/assets with a version stamp so browsers reload changed files. */
 function asset(string $path): string
 {
@@ -245,4 +254,22 @@ function nav_active(string $page): string
     $publicDir = str_replace('\\', '/', APP_ROOT) . '/public/';
     // Case-insensitive because Windows paths may differ in drive-letter case.
     return strcasecmp($script, $publicDir . ltrim($page, '/')) === 0 ? ' is-active' : '';
+}
+
+/**
+ * Sale details of a product row: ['was' => '2000.00', 'percent' => 25]
+ * when the price before the discount is higher than the price, otherwise null.
+ */
+function sale_info(array $product): ?array
+{
+    $was = $product['compare_at_price'] ?? null;
+    if ($was === null || $was === '') {
+        return null;
+    }
+    $wasCents = CartService::toCents((string) $was);
+    $nowCents = CartService::toCents((string) $product['price']);
+    if ($wasCents <= $nowCents || $wasCents <= 0) {
+        return null;
+    }
+    return ['was' => (string) $was, 'percent' => max(1, (int) floor(($wasCents - $nowCents) * 100 / $wasCents))];
 }

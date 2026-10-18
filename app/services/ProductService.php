@@ -24,8 +24,10 @@ final class ProductService
 
     /** Columns needed for a product card, plus the image to show. */
     private const CARD_COLUMNS = '
-        p.id, p.name, p.slug, p.short_description, p.price, p.stock_quantity, p.low_stock_threshold,
-        p.is_featured, c.name AS category_name, c.slug AS category_slug,
+        p.id, p.name, p.slug, p.short_description, p.price, p.compare_at_price, p.stock_quantity, p.low_stock_threshold,
+        p.is_featured, p.is_customizable, c.name AS category_name, c.slug AS category_slug,
+        (SELECT AVG(r.rating) FROM product_reviews r WHERE r.product_id = p.id AND r.is_visible = 1) AS rating_avg,
+        (SELECT COUNT(*) FROM product_reviews r WHERE r.product_id = p.id AND r.is_visible = 1) AS rating_count,
         (SELECT pi.file_name FROM product_images pi
           WHERE pi.product_id = p.id
           ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC
@@ -39,6 +41,7 @@ final class ProductService
      *   q         string search words
      *   min, max  string prices in LKR
      *   in_stock  bool   only products with stock
+ *   on_sale   bool   only products with a sale price
      *   sort      string key of SORTS
      *   page      int    1-based page number
      *
@@ -82,6 +85,9 @@ final class ProductService
         }
         if (!empty($filters['in_stock'])) {
             $where[] = 'p.stock_quantity > 0';
+        }
+        if (!empty($filters['on_sale'])) {
+            $where[] = 'p.compare_at_price IS NOT NULL AND p.compare_at_price > p.price';
         }
 
         $whereSql = implode(' AND ', $where);
@@ -141,7 +147,8 @@ final class ProductService
         [$where, $params] = self::visibilityWhere();
         $product = Database::fetchOne(
             'SELECT p.id, p.category_id, p.sku, p.name, p.slug, p.short_description, p.description,
-                    p.price, p.stock_quantity, p.low_stock_threshold, p.is_featured, p.created_at,
+                    p.price, p.compare_at_price, p.stock_quantity, p.low_stock_threshold, p.is_featured, p.created_at,
+                    p.is_customizable, p.custom_label, p.custom_max_length, p.custom_required,
                     c.name AS category_name, c.slug AS category_slug
                FROM products p JOIN categories c ON c.id = p.category_id
               WHERE ' . implode(' AND ', $where) . ' AND p.slug = :slug',

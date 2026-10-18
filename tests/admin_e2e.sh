@@ -6,15 +6,18 @@ post(){ local jar=$1 path=$2; shift 2; local T=$(tok $jar "${TOKPAGE:-$path}"); 
 upload(){ local jar=$1 path=$2; shift 2; local T=$(tok $jar "$path"); curl -s -c $jar -b $jar -o /dev/null -w '%{http_code}' -F "_csrf=$T" "$@" "$B/$path"; }
 page(){ curl -s -c $1 -b $1 "$B/$2"; }
 flash(){ page $1 "$2" | grep -o 'alert alert--[a-z]*" role="status">[^<]*<span>[^<]*' | sed 's/.*<span>//' | head -1; }
+mtoken(){ local f=$(ls -t ../storage/mail/*.html 2>/dev/null | xargs -r grep -l -- "$1" | xargs -r grep -l "$2" | head -1); [ -n "$f" ] && grep -o "$2?token=[a-f0-9]*" "$f" | head -1 | sed "s/.*token=//"; }
+verify(){ local T=$(mtoken $2 verify-email.php); TOKPAGE="verify-email.php?token=$T" post $1 verify-email.php -d token=$T >/dev/null; }
 pass=0; fail=0
 check(){ if [ "$2" == "$3" ]; then pass=$((pass+1)); echo "  ok   $1"; else fail=$((fail+1)); echo "  FAIL $1: expected [$3] got [$2]"; fi; }
 rm -f *.jar
 A=admin.jar; C=cust.jar
 TOKPAGE=login.php post $A login.php -d email=admin@example.com -d password=admin123 >/dev/null
 TOKPAGE=register.php post $C register.php -d full_name=Nimal%20Perera -d email=nimal@example.com -d phone=0771234567 -d password=secret123 -d password_confirm=secret123 >/dev/null
+verify $C nimal@example.com
 
 echo "== Access control"
-for p in admin/ admin/orders.php admin/products.php admin/product-edit.php admin/categories.php admin/inventory.php admin/customers.php admin/reports.php "admin/report-export.php?report=orders" admin/activity.php admin/settings.php; do
+for p in admin/ admin/orders.php admin/products.php admin/product-edit.php admin/categories.php admin/inventory.php admin/customers.php admin/reports.php "admin/report-export.php?report=orders" admin/activity.php admin/emails.php admin/settings.php; do
   check "customer blocked: $p" "$(curl -s -o /dev/null -w '%{http_code}' -b $C "$B/$p")" "403"
 done
 check "guest redirected to login" "$(curl -s -o /dev/null -w '%{http_code}' "$B/admin/settings.php")" "303"
@@ -74,7 +77,7 @@ upload $A "$EP" -F action=upload -F "image=@good.jpg;type=image/jpeg" -F alt_tex
 check "valid JPEG accepted" "$(q "SELECT COUNT(*) FROM product_images WHERE product_id=$PID")" "1"
 F1=$(q "SELECT file_name FROM product_images WHERE product_id=$PID LIMIT 1")
 check "random file name" "$(echo $F1 | grep -cE '^[a-f0-9]{32}\.jpg$')" "1"
-check "resized to max 1600 / kept 800x600" "$(php -r 'echo implode("x", array_slice(getimagesize($argv[1]),0,2));' giftaura/public/uploads/products/$F1)" "800x600"
+check "resized to max 1600 / kept 800x600" "$(php -r 'echo implode("x", array_slice(getimagesize($argv[1]),0,2));' ../public/uploads/products/$F1)" "800x600"
 check "first image is main" "$(q "SELECT is_primary FROM product_images WHERE file_name='$F1'")" "1"
 upload $A "$EP" -F action=upload -F "image=@shell.php;type=image/jpeg" >/dev/null
 upload $A "$EP" -F action=upload -F "image=@fake.jpg;type=image/jpeg" >/dev/null
@@ -85,15 +88,15 @@ upload $A "$EP" -F action=upload -F "image=@big.jpg;type=image/jpeg" >/dev/null
 check "2.5 MB file refused" "$(q "SELECT COUNT(*) FROM product_images WHERE product_id=$PID")" "1"
 upload $A "$EP" -F action=upload -F "image=@poly.jpg;type=image/jpeg" >/dev/null
 F2=$(q "SELECT file_name FROM product_images WHERE product_id=$PID ORDER BY id DESC LIMIT 1")
-check "polyglot JPEG accepted but PHP payload stripped by re-encode" "$(grep -c 'system' giftaura/public/uploads/products/$F2)" "0"
+check "polyglot JPEG accepted but PHP payload stripped by re-encode" "$(grep -c 'system' ../public/uploads/products/$F2)" "0"
 upload $A "$EP" -F action=upload -F "image=@good.png;type=image/png" >/dev/null
 check "PNG accepted" "$(q "SELECT COUNT(*) FROM product_images WHERE product_id=$PID AND file_name LIKE '%.png'")" "1"
-check "no stray files in uploads" "$(ls giftaura/public/uploads/products | grep -vc -E '^[a-f0-9]{32}\.(jpg|png|webp)$|^\.gitkeep$')" "0"
+check "no stray files in uploads" "$(ls ../public/uploads/products | grep -vc -E '^[a-f0-9]{32}\.(jpg|png|webp)$|^\.gitkeep$')" "0"
 I2=$(q "SELECT id FROM product_images WHERE file_name='$F2'")
 TOKPAGE=$EP post $A "$EP" -d action=primary -d image_id=$I2 >/dev/null
 check "make second image main" "$(q "SELECT file_name FROM product_images WHERE product_id=$PID AND is_primary=1")" "$F2"
 TOKPAGE=$EP post $A "$EP" -d action=delete_image -d image_id=$I2 >/dev/null
-check "delete main image: row + file gone, next becomes main" "$(q "SELECT COUNT(*) FROM product_images WHERE id=$I2"),$(test -f giftaura/public/uploads/products/$F2 && echo file || echo nofile),$(q "SELECT COUNT(*) FROM product_images WHERE product_id=$PID AND is_primary=1")" "0,nofile,1"
+check "delete main image: row + file gone, next becomes main" "$(q "SELECT COUNT(*) FROM product_images WHERE id=$I2"),$(test -f ../public/uploads/products/$F2 && echo file || echo nofile),$(q "SELECT COUNT(*) FROM product_images WHERE product_id=$PID AND is_primary=1")" "0,nofile,1"
 check "shop shows uploaded image as main" "$(curl -s "$B/product.php?slug=dark-chocolate-box" | grep -o 'id="gallery-main" src="[^"]*' | grep -c "$F1")" "1"
 
 echo "== Stock"

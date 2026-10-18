@@ -22,7 +22,10 @@ $active = (int) $customer['is_active'] === 1;
                 <?= $active ? '<span class="badge badge--success">Active</span>' : '<span class="badge badge--neutral">Inactive</span>' ?>
             </header>
             <dl class="kv">
-                <div><dt>Email</dt><dd><?= e($customer['email']) ?></dd></div>
+                <div><dt>Email</dt><dd><?= e($customer['email']) ?>
+                    <?= $customer['email_verified_at'] !== null
+                        ? '<span class="badge badge--success">Verified</span>'
+                        : '<span class="badge badge--warning">Not verified</span>' ?></dd></div>
                 <div><dt>Phone</dt><dd><?= e($customer['phone'] ?? '—') ?></dd></div>
                 <div><dt>Joined</dt><dd><?= e(format_datetime($customer['created_at'])) ?></dd></div>
                 <div><dt>Last login</dt><dd><?= e(format_datetime($customer['last_login_at']) ?: 'Never') ?></dd></div>
@@ -46,7 +49,21 @@ $active = (int) $customer['is_active'] === 1;
                     <input type="hidden" name="action" value="temp_password">
                     <button type="submit" class="btn btn--ghost">Set temporary password</button>
                 </form>
-                <p class="hint">Use this when a customer forgets their password.</p>
+                <p class="hint">Customers can also reset their own password with “Forgotten your password?” on the login page.</p>
+                <?php if ($customer['email_verified_at'] === null): ?>
+                    <form method="post" action="<?= e(url('admin/customer.php', ['id' => $customer['id']])) ?>">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="resend_verification">
+                        <button type="submit" class="btn btn--ghost">Send verification e-mail again</button>
+                    </form>
+                    <form method="post" action="<?= e(url('admin/customer.php', ['id' => $customer['id']])) ?>"
+                          data-confirm="Mark this e-mail address as verified? Do this only if you have confirmed it with the customer (for example by phone).">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="mark_verified">
+                        <button type="submit" class="btn btn--ghost">Mark e-mail as verified</button>
+                    </form>
+                    <p class="hint">Customers need a verified e-mail address to place orders.</p>
+                <?php endif; ?>
             </div>
         </section>
 

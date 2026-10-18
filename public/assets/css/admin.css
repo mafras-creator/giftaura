@@ -285,3 +285,55 @@ button[aria-busy="true"] { cursor: progress; opacity: .75; }
     .kv div { grid-template-columns: 1fr; gap: 2px; }
     .filters input, .filters select { width: 100% !important; min-width: 0; }
 }
+
+/* ---------- Banners and category pictures ---------- */
+.banner-thumb { width: 160px; height: 50px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); display: block; }
+.banner-thumb--large { width: 100%; height: auto; max-height: 160px; margin-bottom: 8px; }
+#banner-form .upload-preview { width: 100%; height: auto; aspect-ratio: 16 / 5; }
+.category-thumb { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid var(--line); vertical-align: middle; margin-right: 8px; }
+.category-thumb--large { width: 96px; height: 96px; margin: 0 0 8px; display: block; }
+.banner-row { display: flex; gap: 12px; align-items: flex-start; min-width: 280px; }
+.banner-row .banner-thumb { flex: none; width: 128px; height: 40px; }
+.check--top { align-items: flex-start; }
+.check--top input { margin-top: 3px; flex: none; }
+.page-actions { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.page-actions .admin-lead { max-width: 60em; }
+.data-table .actions .btn { white-space: nowrap; }
+.preview-strip { display: flex; gap: 8px; flex-wrap: wrap; }
+.preview-strip:empty { display: none; }
+.preview-strip__img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+.preview-strip__img.is-main { border: 2px solid var(--plum-600); }
+kbd { font: 600 .8rem var(--font-body, sans-serif); padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; background: #fff; }
+.admin-brand__logo { width: 34px; height: 34px; flex: none; }
+.admin-brand__logo--custom { background: #fff; border-radius: 8px; padding: 2px; object-fit: contain; }
+.admin-brand__logo--wide { width: auto; max-width: 150px; padding: 3px 8px; }
+.logo-settings { display: grid; gap: 16px; }
+@media (min-width: 900px) { .logo-settings { grid-template-columns: 240px 1fr auto; align-items: start; } }
+.logo-settings__preview { background: var(--plum-700); padding: 14px; border-radius: 10px; }
+.logo-settings__preview img { display: block; height: 64px; width: auto; max-width: 210px; object-fit: contain; background: #fff; padding: 4px; border-radius: 8px; }
+.logo-settings__preview .hint { color: #e9def5; }
+.logo-settings__preview .hint { margin-top: 6px; }
+.admin-brand--wide { flex-direction: column; align-items: flex-start; gap: 8px; }
+.popular-admin { margin-top: 20px; }
+.popular-admin__row { display: grid; grid-template-columns: 28px 1fr; gap: 8px 10px; align-items: center; }
+@media (min-width: 720px) { .popular-admin__row { grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1.2fr); } }
+@media (max-width: 719px) { .popular-admin__row input { grid-column: 2; } }
+.popular-admin__num { width: 28px; height: 28px; border-radius: 50%; background: var(--lilac-100); color: var(--plum-800); display: grid; place-items: center; font-weight: 700; font-size: .85rem; }
+
+/* Product form: personalisation box */
+.custom-box { border: 1px solid var(--plum-200); border-radius: 12px; padding: 14px 16px 6px; margin: 4px 0 18px; background: var(--lilac-50); }
+.custom-box legend { font-weight: 700; padding: 0 6px; color: var(--plum-700); }
+.custom-box__details { margin-top: 12px; }
+.custom-box__details[hidden] { display: none; }
+
+/* Personalisation message on the order page */
+.custom-note { margin: 6px 0 0; padding: 6px 9px; border-left: 3px solid #ffc629; background: var(--lilac-50); border-radius: 0 8px 8px 0; font-size: .86rem; max-width: 420px; }
+.custom-note__label { display: block; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--plum-600); }
+.custom-note__text { white-space: pre-line; overflow-wrap: anywhere; }
+
+/* Reviews */
+.review-stars { color: #f5a800; letter-spacing: 1px; white-space: nowrap; }
+.review-stars__off { color: #ddd3e6; }
+.review-cell { max-width: 380px; }
+.review-cell__text { margin: 4px 0 0; white-space: pre-line; overflow-wrap: anywhere; font-size: .9rem; }
+.review-cell .muted { margin: 4px 0 0; }

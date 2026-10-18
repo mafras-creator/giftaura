@@ -13,6 +13,10 @@ if ($user['role'] === 'admin') {
     Flash::add('info', 'Administrator accounts cannot place orders. Please use a customer account.');
     redirect('cart.php');
 }
+if ($user['email_verified_at'] === null) {
+    Flash::add('error', 'Please verify your e-mail address before placing an order. We sent a link to ' . $user['email'] . '.');
+    redirect('cart.php');
+}
 
 $cart = CartService::summary();
 if ($cart['lines'] === []) {

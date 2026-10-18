@@ -19,7 +19,7 @@ $formUrl = $isNew ? url('admin/product-edit.php') : url('admin/product-edit.php'
         <?php if ($errors !== []): ?>
             <div class="alert alert--error panel-alert"><span>Please correct the highlighted fields.</span></div>
         <?php endif; ?>
-        <form method="post" action="<?= e($formUrl) ?>" class="admin-form" novalidate>
+        <form method="post" action="<?= e($formUrl) ?>" class="admin-form"<?= $isNew ? ' enctype="multipart/form-data"' : '' ?> novalidate>
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="save">
 
@@ -40,10 +40,18 @@ $formUrl = $isNew ? url('admin/product-edit.php') : url('admin/product-edit.php'
                     <?= field_error($errors, 'category_id') ?>
                 </div>
                 <div class="field">
-                    <label for="price">Price (LKR)</label>
-                    <input type="text" id="price" name="price" value="<?= e((string) ($old['price'] ?? '')) ?>" inputmode="decimal" placeholder="e.g. 4500.00" required<?= field_attrs($errors, 'price') ?>>
+                    <label for="price">Normal price (LKR)</label>
+                    <input type="text" id="price" name="price" value="<?= e((string) ($old['price'] ?? '')) ?>" inputmode="decimal" placeholder="e.g. 2000.00" required<?= field_attrs($errors, 'price') ?>>
                     <?= field_error($errors, 'price') ?>
                 </div>
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label for="sale_price">Sale price (LKR) <span class="optional">(optional)</span></label>
+                    <input type="text" id="sale_price" name="sale_price" value="<?= e((string) ($old['sale_price'] ?? '')) ?>" inputmode="decimal" placeholder="e.g. 1500.00"<?= field_attrs($errors, 'sale_price') ?>>
+                    <?= field_error($errors, 'sale_price') ?>
+                </div>
+                <p class="hint field-row__note">With a sale price, customers pay the sale price and see the normal price crossed out, with the discount in %. Leave it empty to end the sale.</p>
             </div>
             <div class="field-row">
                 <div class="field">
@@ -67,6 +75,28 @@ $formUrl = $isNew ? url('admin/product-edit.php') : url('admin/product-edit.php'
                 <textarea id="description" name="description" rows="6" maxlength="5000"<?= field_attrs($errors, 'description') ?>><?= e($old['description'] ?? '') ?></textarea>
                 <?= field_error($errors, 'description') ?>
             </div>
+            <?php $custom = (string) ($old['is_customizable'] ?? '0') === '1'; ?>
+            <fieldset class="custom-box" data-custom-box>
+                <legend>Personalisation</legend>
+                <label class="check"><input type="checkbox" name="is_customizable" value="1" data-custom-toggle<?= $custom ? ' checked' : '' ?>> Customers can personalise this product (type a name or message)</label>
+                <div class="custom-box__details" data-custom-details<?= $custom ? '' : ' hidden' ?>>
+                    <div class="field-row">
+                        <div class="field">
+                            <label for="custom_label">Question for the customer <span class="optional">(optional)</span></label>
+                            <input type="text" id="custom_label" name="custom_label" value="<?= e((string) ($old['custom_label'] ?? '')) ?>" maxlength="80" placeholder="<?= e(ProductAdminService::DEFAULT_CUSTOM_LABEL) ?>"<?= field_attrs($errors, 'custom_label') ?>>
+                            <?= field_error($errors, 'custom_label') ?>
+                            <p class="hint">e.g. "Name to print on the mug" or "Message for the card".</p>
+                        </div>
+                        <div class="field">
+                            <label for="custom_max_length">Longest message (characters)</label>
+                            <input type="number" id="custom_max_length" name="custom_max_length" value="<?= e((string) ($old['custom_max_length'] ?? '100')) ?>" min="10" max="500" step="1"<?= field_attrs($errors, 'custom_max_length') ?>>
+                            <?= field_error($errors, 'custom_max_length') ?>
+                            <p class="hint">Between 10 and 500.</p>
+                        </div>
+                    </div>
+                    <label class="check"><input type="checkbox" name="custom_required" value="1"<?= (string) ($old['custom_required'] ?? '1') === '1' ? ' checked' : '' ?>> The customer must type a message before adding it to the cart</label>
+                </div>
+            </fieldset>
             <div class="field-row">
                 <div class="field">
                     <label for="low_stock_threshold">Low-stock alert level</label>
@@ -88,6 +118,15 @@ $formUrl = $isNew ? url('admin/product-edit.php') : url('admin/product-edit.php'
                     </div>
                 <?php endif; ?>
             </div>
+            <?php if ($isNew): ?>
+                <div class="field">
+                    <label for="images">Photos <span class="optional">(up to <?= e((string) ProductAdminService::MAX_IMAGES) ?>, optional)</span></label>
+                    <input type="file" id="images" name="images[]" accept="image/jpeg,image/png,image/webp" multiple
+                           data-images-preview data-max="<?= e((string) ProductAdminService::MAX_IMAGES) ?>">
+                    <p class="hint">Hold <kbd>Ctrl</kbd> to choose several photos at once. JPG, PNG or WebP, up to 2 MB each. The first photo becomes the main photo; you can change it later.</p>
+                    <div class="preview-strip" data-preview-strip></div>
+                </div>
+            <?php endif; ?>
             <label class="check"><input type="checkbox" name="is_active" value="1"<?= (string) ($old['is_active'] ?? '1') === '1' ? ' checked' : '' ?>> Active (visible in the shop)</label>
             <label class="check"><input type="checkbox" name="is_featured" value="1"<?= (string) ($old['is_featured'] ?? '0') === '1' ? ' checked' : '' ?>> Featured on the homepage</label>
             <button type="submit" class="btn btn--primary"><?= $isNew ? 'Create product' : 'Save changes' ?></button>
@@ -97,7 +136,7 @@ $formUrl = $isNew ? url('admin/product-edit.php') : url('admin/product-edit.php'
     <div class="admin-stack">
         <?php if ($isNew): ?>
             <section class="admin-panel">
-                <p class="empty-state">Create the product first, then you can upload images and manage stock here.</p>
+                <p class="empty-state">Choose up to <?= e((string) ProductAdminService::MAX_IMAGES) ?> photos in the form, then press <strong>Create product</strong>. After that you can change the main photo, add more and manage stock here.</p>
             </section>
         <?php else: ?>
             <section class="admin-panel">
@@ -145,11 +184,13 @@ $formUrl = $isNew ? url('admin/product-edit.php') : url('admin/product-edit.php'
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="upload">
                             <input type="hidden" name="MAX_FILE_SIZE" value="<?= e((string) ImageUploader::MAX_BYTES) ?>">
+                            <?php $freePlaces = ProductAdminService::MAX_IMAGES - count($images); ?>
                             <div class="field">
-                                <label for="image">Upload an image</label>
-                                <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/webp" required data-image-preview>
-                                <p class="hint">JPG, PNG or WebP, up to 2 MB, at least 100 × 100 px. Large images are resized to 1600 px.</p>
-                                <img class="upload-preview is-hidden" alt="" data-preview-target width="120" height="120">
+                                <label for="image">Add photos <span class="optional">(<?= e((string) $freePlaces) ?> more allowed)</span></label>
+                                <input type="file" id="image" name="images[]" accept="image/jpeg,image/png,image/webp" required multiple
+                                       data-images-preview data-max="<?= e((string) $freePlaces) ?>">
+                                <p class="hint">Hold <kbd>Ctrl</kbd> to choose several. JPG, PNG or WebP, up to 2 MB each, at least 100 × 100 px. Large images are resized to 1600 px.</p>
+                                <div class="preview-strip" data-preview-strip></div>
                             </div>
                             <div class="field">
                                 <label for="alt_text">Image description <span class="optional">(for screen readers)</span></label>

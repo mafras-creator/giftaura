@@ -32,6 +32,6 @@
         </form>
 
         <p class="auth__switch">New to GiftAura? <a href="<?= e(url('register.php')) ?>">Create an account</a></p>
-        <p class="auth__help">Forgotten your password? Please contact the store and an administrator will set a temporary password for you.</p>
+        <p class="auth__help"><a href="<?= e(url('forgot-password.php')) ?>">Forgotten your password?</a></p>
     </div>
 </section>

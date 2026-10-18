@@ -78,7 +78,8 @@ try {
 }
 
 $tables = Database::query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
-check('DB-02', 'All 15 tables exist', count($tables) === 15, count($tables) . ' tables');
+check('DB-02', 'All 20 tables exist', count($tables) === 20, count($tables) . ' tables'
+    . (count($tables) < 20 ? ' - run the files in sql/updates/ in phpMyAdmin' : ''));
 
 $tz = (string) Database::fetchValue('SELECT @@session.time_zone');
 check('DB-03', 'Session time zone is Sri Lanka (+05:30)', $tz === '+05:30', $tz);
@@ -182,6 +183,19 @@ $plain = (int) Database::fetchValue(
 );
 check('DB-12', 'No plain-text passwords stored', $plain === 0, $plain . ' suspicious');
 
+$missing = [];
+foreach (['products' => ['compare_at_price', 'is_customizable', 'custom_label', 'custom_max_length', 'custom_required'],
+          'cart_items' => ['customization_text'], 'order_items' => ['customization_text']] as $table => $columns) {
+    $have = array_column(Database::fetchAll('SHOW COLUMNS FROM ' . $table), 'Field');
+    foreach ($columns as $column) {
+        if (!in_array($column, $have, true)) {
+            $missing[] = $table . '.' . $column;
+        }
+    }
+}
+check('DB-13', 'Sale-price and personalisation columns exist', $missing === [],
+    $missing === [] ? 'all present' : 'missing ' . implode(', ', $missing) . ' - run sql/updates/2026-10-18_customization.sql');
+
 out('');
 // ---------------------------------------------------------------------
 out('2. Web server and security (Apache + .htaccess)');
@@ -245,6 +259,32 @@ check(sprintf('WEB-%02d', $i++), 'Logout cannot be triggered by a simple link (G
 
 out('');
 // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+out('2b. E-mail');
+// ---------------------------------------------------------------------
+$transport = Mailer::transport();
+check('MAIL-01', 'E-mail mode is set', in_array((string) config('mail.transport'), ['smtp', 'file', 'off'], true),
+    'mode: ' . $transport . ($transport === 'file' ? ' (test mode - saved to storage/mail)' : ''));
+$siteUrl = (string) config('app.site_url', '');
+check('MAIL-02', 'Site address for e-mail links (app.site_url)', (bool) preg_match('#^https?://[^/\s]+$#', $siteUrl),
+    $siteUrl !== '' ? 'links start with ' . $siteUrl . config('app.base_url') : 'missing - add app.site_url to config/config.php');
+$mailDir = APP_ROOT . '/storage/mail';
+check('MAIL-03', 'storage/mail is writable (test mode)', $transport !== 'file' || (is_dir($mailDir) && is_writable($mailDir)),
+    $transport === 'file' ? $mailDir : 'not needed in this mode');
+[$s] = http_get($base . '/storage/mail/.gitkeep');
+check('MAIL-04', 'Blocked: saved e-mails (/storage/mail/)', in_array($s, [403, 404], true), "HTTP {$s}");
+if ($transport === 'smtp') {
+    $cafile = (string) config('mail.cafile', '');
+    $complete = config('mail.username') && config('mail.password') && ($cafile === '' || is_file($cafile));
+    check('MAIL-05', 'SMTP settings complete', (bool) $complete, config('mail.host') . ':' . config('mail.port') . ' as ' . config('mail.username')
+        . ($cafile !== '' && !is_file($cafile) ? ' - certificate file not found: ' . $cafile : '') . ' (send a test: scripts\\test_mail.php)');
+} else {
+    check('MAIL-05', 'SMTP settings complete', true, 'not needed in this mode');
+}
+$failedMail = EmailService::failedCount();
+check('MAIL-06', 'No failed e-mails in the last 7 days', $failedMail === 0, $failedMail . ' failed - see Admin > E-mail log');
+
+out('');
 out('3. Performance (NFR-18: pages under 1 second on the local server)');
 // ---------------------------------------------------------------------
 $slug = (string) Database::fetchValue('SELECT slug FROM products WHERE is_active = 1 ORDER BY id LIMIT 1');

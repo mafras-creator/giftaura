@@ -165,3 +165,21 @@ stateDiagram-v2
 | Database | MariaDB 10.4.32 on `127.0.0.1:3307`, database `giftaura_db`, user `giftaura_app` |
 | Admin tool | phpMyAdmin 5.2.1 at `http://localhost/phpmyadmin` |
 | Version control | Git 2.55, one commit per completed phase |
+
+## 9. E-mail (added 17 Oct 2026)
+
+```
+page / service ──► EmailService ──► View::fetch('emails/…', layout 'email')  ──► HTML + plain text
+                        │                                                      │
+                        │                                                      ▼
+                        │                                   Mailer ── 'file' → storage/mail/*.html (test mode)
+                        │                                          ── 'smtp' → smtp.gmail.com:465 (TLS, App Password)
+                        │                                          ── 'off'  → nothing
+                        └──► email_log (template, recipient, result, error)
+```
+
+- **Who calls it:** `register.php` and `resend-verification.php` (verification link), `forgot-password.php` (reset link), `OrderService::placeOrder()` and `cancelByCustomer()`, `OrderAdminService::changeStatus()` and `changePaymentStatus()`.
+- **After the transaction:** order e-mails are sent only after the order or status change has been committed, and every error is caught and logged — e-mail can never undo or block an order.
+- **One-time links:** `TokenService` creates a 32-byte secret, stores its SHA-256 hash in `user_tokens`, and later marks it used with a single conditional `UPDATE`. `verify-email.php` and `reset-password.php` change data only on POST (CSRF-protected).
+- **Checkout rule:** `checkout.php` redirects unverified customers to the cart, and `OrderService::placeOrder()` checks `users.email_verified_at` again (defence in depth).
+- **Configuration:** the `mail` section of `config/config.php`, written by `scripts/setup_mail.php`; `app.site_url` + `app.base_url` form the links in e-mails.

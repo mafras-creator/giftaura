@@ -55,6 +55,20 @@ if errorlevel 2 (
     echo [OK]   backups\photos-%STAMP%.zip
 )
 
+echo Backing up banner, category, logo and founder pictures ...
+powershell -NoProfile -Command "$d = @('public\uploads\banners','public\uploads\categories','public\uploads\brand','public\uploads\people') | Where-Object { Test-Path $_ }; $f = Get-ChildItem $d -File | Where-Object { $_.Name -ne '.gitkeep' }; if (-not $f) { exit 2 }; Compress-Archive -Path $d -DestinationPath 'backups\pictures-%STAMP%.zip' -Force; if ($?) { exit 0 } else { exit 1 }"
+if errorlevel 2 (
+    echo [OK]   No banner or category pictures to back up yet.
+) else if errorlevel 1 (
+    echo [FAIL] Picture backup failed - copy public\uploads\banners, categories and brand by hand.
+) else (
+    echo [OK]   backups\pictures-%STAMP%.zip
+)
+
+if exist "storage\content\popular.json" copy /Y "storage\content\popular.json" "backups\popular-%STAMP%.json" >nul
+if exist "storage\content\about.json" (
+    copy /Y "storage\content\about.json" "backups\about-%STAMP%.json" >nul && echo [OK]   backups\about-%STAMP%.json
+)
 echo.
 echo Backup finished. Copy the "backups" folder to a safe place (USB / cloud).
 pause

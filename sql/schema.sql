@@ -28,6 +28,11 @@
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS product_reviews;
+DROP TABLE IF EXISTS wishlist_items;
+DROP TABLE IF EXISTS banners;
+DROP TABLE IF EXISTS email_log;
+DROP TABLE IF EXISTS user_tokens;
 DROP TABLE IF EXISTS admin_activity_log;
 DROP TABLE IF EXISTS inventory_movements;
 DROP TABLE IF EXISTS payments;
@@ -56,6 +61,7 @@ CREATE TABLE users (
     email           VARCHAR(190)     NOT NULL,
     phone           VARCHAR(20)      NULL,
     password_hash   VARCHAR(255)     NOT NULL COMMENT 'password_hash() output, never plaintext',
+    email_verified_at DATETIME       NULL COMMENT 'When the e-mail link was confirmed; NULL = not verified',
     is_active       TINYINT(1)       NOT NULL DEFAULT 1,
     last_login_at   DATETIME         NULL,
     created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -114,6 +120,7 @@ CREATE TABLE categories (
     name            VARCHAR(100)     NOT NULL,
     slug            VARCHAR(120)     NOT NULL,
     description     VARCHAR(500)     NULL,
+    image_file      VARCHAR(60)      NULL COMMENT 'Random file name in public/uploads/categories (NULL = use a product photo)',
     sort_order      SMALLINT         NOT NULL DEFAULT 0,
     is_active       TINYINT(1)       NOT NULL DEFAULT 1,
     created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -139,10 +146,15 @@ CREATE TABLE products (
     short_description   VARCHAR(255)     NULL,
     description         TEXT             NULL,
     price               DECIMAL(10,2)    NOT NULL COMMENT 'Selling price in LKR',
+    compare_at_price DECIMAL(10,2)   NULL COMMENT 'Price before the discount, shown crossed out (NULL = not on sale)',
     stock_quantity      INT              NOT NULL DEFAULT 0,
     low_stock_threshold INT              NOT NULL DEFAULT 5,
     is_featured         TINYINT(1)       NOT NULL DEFAULT 0,
     is_active           TINYINT(1)       NOT NULL DEFAULT 1,
+    is_customizable     TINYINT(1)       NOT NULL DEFAULT 0 COMMENT '1 = customer types a personalisation message',
+    custom_label        VARCHAR(80)      NULL COMMENT 'Question shown above the message box, e.g. Name to print',
+    custom_max_length   SMALLINT         NOT NULL DEFAULT 100 COMMENT 'Longest message allowed (10-500 characters)',
+    custom_required     TINYINT(1)       NOT NULL DEFAULT 1 COMMENT '1 = the message must be filled in',
     created_at          DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
@@ -160,6 +172,7 @@ CREATE TABLE products (
     CONSTRAINT chk_products_threshold CHECK (low_stock_threshold >= 0),
     CONSTRAINT chk_products_featured  CHECK (is_featured IN (0,1)),
     CONSTRAINT chk_products_active    CHECK (is_active IN (0,1)),
+    CONSTRAINT chk_products_custom    CHECK (is_customizable IN (0,1) AND custom_required IN (0,1) AND custom_max_length BETWEEN 10 AND 500),
     CONSTRAINT chk_products_slug      CHECK (slug REGEXP '^[a-z0-9]+(-[a-z0-9]+)*$')
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -206,6 +219,7 @@ CREATE TABLE cart_items (
     cart_id         INT UNSIGNED     NOT NULL,
     product_id      INT UNSIGNED     NOT NULL,
     quantity        SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+    customization_text VARCHAR(500)  NULL COMMENT 'Personalisation message typed by the customer',
     added_at        DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
@@ -276,6 +290,7 @@ CREATE TABLE order_items (
     unit_price      DECIMAL(10,2)    NOT NULL,
     quantity        SMALLINT UNSIGNED NOT NULL,
     line_total      DECIMAL(10,2)    NOT NULL,
+    customization_text VARCHAR(500)  NULL COMMENT 'Personalisation message (snapshot)',
     PRIMARY KEY (id),
     UNIQUE KEY uq_order_items_product (order_id, product_id),
     KEY idx_order_items_product (product_id),
@@ -405,4 +420,111 @@ CREATE TABLE settings (
     description     VARCHAR(255)     NULL,
     updated_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (setting_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 15. user_tokens : one-time links for e-mail verification and password
+--     reset. Only a SHA-256 hash of the secret is stored.
+-- ---------------------------------------------------------------------
+CREATE TABLE user_tokens (
+    id              BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    user_id         INT UNSIGNED     NOT NULL,
+    purpose         ENUM('verify_email','reset_password') NOT NULL,
+    token_hash      CHAR(64)         NOT NULL COMMENT 'sha256 of the secret sent by e-mail',
+    expires_at      DATETIME         NOT NULL,
+    used_at         DATETIME         NULL,
+    created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_user_tokens_hash (token_hash),
+    KEY idx_user_tokens_user (user_id, purpose, created_at),
+    CONSTRAINT fk_user_tokens_user FOREIGN KEY (user_id) REFERENCES users (id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 16. email_log : every e-mail the system tried to send and the result.
+-- ---------------------------------------------------------------------
+CREATE TABLE email_log (
+    id              BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    user_id         INT UNSIGNED     NULL,
+    order_id        INT UNSIGNED     NULL,
+    template        VARCHAR(50)      NOT NULL COMMENT 'e.g. verify_email, order_placed, order_status',
+    recipient       VARCHAR(190)     NOT NULL,
+    subject         VARCHAR(200)     NOT NULL,
+    transport       ENUM('smtp','file','off') NOT NULL,
+    status          ENUM('sent','saved','skipped','failed') NOT NULL,
+    error           VARCHAR(255)     NULL,
+    created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_email_log_time (created_at),
+    KEY idx_email_log_status (status, created_at),
+    KEY idx_email_log_order (order_id),
+    CONSTRAINT fk_email_log_user FOREIGN KEY (user_id) REFERENCES users (id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT fk_email_log_order FOREIGN KEY (order_id) REFERENCES orders (id)
+        ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 17. banners : homepage slides managed in Admin -> Banners
+-- ---------------------------------------------------------------------
+CREATE TABLE banners (
+    id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    title           VARCHAR(120)     NOT NULL COMMENT 'Heading on the slide; also the image description for screen readers',
+    subtitle        VARCHAR(200)     NULL,
+    button_text     VARCHAR(40)      NULL,
+    link_url        VARCHAR(255)     NULL COMMENT 'Page inside the shop (e.g. products.php?category=flowers) or https:// address',
+    image_file      VARCHAR(60)      NOT NULL COMMENT 'Random file name in public/uploads/banners',
+    show_text       TINYINT(1)       NOT NULL DEFAULT 1 COMMENT '0 = the picture already contains its own text',
+    sort_order      SMALLINT         NOT NULL DEFAULT 0,
+    is_active       TINYINT(1)       NOT NULL DEFAULT 1,
+    starts_on       DATE             NULL COMMENT 'Shown from this day (NULL = immediately)',
+    ends_on         DATE             NULL COMMENT 'Shown until this day (NULL = no end)',
+    created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_banners_active (is_active, sort_order),
+    CONSTRAINT chk_banners_active CHECK (is_active IN (0,1)),
+    CONSTRAINT chk_banners_show_text CHECK (show_text IN (0,1)),
+    CONSTRAINT chk_banners_dates CHECK (starts_on IS NULL OR ends_on IS NULL OR ends_on >= starts_on),
+    CONSTRAINT chk_banners_file CHECK (image_file REGEXP '^[a-f0-9]{32}\\.(jpg|png|webp)$')
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 19. wishlist_items : products saved by customers (heart button)
+-- ---------------------------------------------------------------------
+CREATE TABLE wishlist_items (
+    user_id INT UNSIGNED NOT NULL,
+    product_id INT UNSIGNED NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, product_id),
+    KEY idx_wishlist_product (product_id),
+    CONSTRAINT fk_wishlist_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_wishlist_product FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 20. product_reviews : star rating and comment by a customer who
+--     received the product (a delivered order). One review per customer
+--     per product; the customer can edit it, the administrator can hide it.
+-- ---------------------------------------------------------------------
+CREATE TABLE product_reviews (
+    id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    product_id      INT UNSIGNED     NOT NULL,
+    user_id         INT UNSIGNED     NOT NULL,
+    order_id        INT UNSIGNED     NULL COMMENT 'Delivered order that allowed the review',
+    rating          TINYINT UNSIGNED NOT NULL COMMENT '1 to 5 stars',
+    comment         VARCHAR(1000)    NULL,
+    reviewer_name   VARCHAR(60)      NOT NULL COMMENT 'Name shown with the review, e.g. Nimal P.',
+    is_visible      TINYINT(1)       NOT NULL DEFAULT 1 COMMENT '0 = hidden by the administrator',
+    created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_reviews_user_product (user_id, product_id),
+    KEY idx_reviews_product (product_id, is_visible, created_at),
+    CONSTRAINT fk_reviews_product FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_reviews_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_reviews_order FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT chk_reviews_rating CHECK (rating BETWEEN 1 AND 5),
+    CONSTRAINT chk_reviews_visible CHECK (is_visible IN (0,1))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

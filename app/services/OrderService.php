@@ -61,6 +61,11 @@ final class OrderService
         $userId = (int) $user['id'];
         $errors = [];
 
+        // Defence in depth: the checkout page already blocks unverified accounts.
+        if (Database::fetchValue('SELECT email_verified_at FROM users WHERE id = :id', ['id' => $userId]) === null) {
+            return ['errors' => [], 'general' => 'Please verify your e-mail address before placing an order.'];
+        }
+
         // Contact details
         $v = new Validator($input, ['customer_name' => 'Your name', 'customer_phone' => 'Your phone number']);
         $v->rules([
@@ -104,7 +109,7 @@ final class OrderService
             ): string {
                 // 1. Cart lines (read inside the transaction)
                 $cartRows = Database::fetchAll(
-                    'SELECT ci.product_id, ci.quantity
+                    'SELECT ci.product_id, ci.quantity, ci.customization_text
                        FROM cart_items ci JOIN carts c ON c.id = ci.cart_id
                       WHERE c.user_id = :uid ORDER BY ci.added_at, ci.id',
                     ['uid' => $userId]
@@ -121,7 +126,8 @@ final class OrderService
                     $params['p' . $i] = (int) $row['product_id'];
                 }
                 $locked = Database::fetchAll(
-                    'SELECT id, name, sku, price, stock_quantity, is_active, category_id
+                    'SELECT id, name, sku, price, stock_quantity, is_active, category_id,
+                            is_customizable, custom_max_length, custom_required
                        FROM products WHERE id IN (' . implode(', ', $in) . ') ORDER BY id FOR UPDATE',
                     $params
                 );
@@ -147,12 +153,23 @@ final class OrderService
                             'Sorry, only ' . max(0, (int) $p['stock_quantity']) . ' of "' . $p['name'] . '" left in stock. Please update your cart.'
                         );
                     }
+                    // Personalisation: re-checked here, because the product settings may have changed.
+                    $message = '';
+                    if ((int) $p['is_customizable'] === 1) {
+                        $message = (string) ($row['customization_text'] ?? '');
+                        if ($message === '' && (int) $p['custom_required'] === 1) {
+                            throw new CheckoutException('Please add your personalisation message for "' . $p['name'] . '" in your cart.');
+                        }
+                        if (mb_strlen($message) > (int) $p['custom_max_length']) {
+                            throw new CheckoutException('Your personalisation message for "' . $p['name'] . '" is too long. Please shorten it in your cart.');
+                        }
+                    }
                     $priceCents = CartService::toCents((string) $p['price']);
                     $lineCents = $priceCents * $qty;
                     $subtotalCents += $lineCents;
                     $lines[] = ['product' => $p, 'quantity' => $qty, 'price' => CartService::fromCents($priceCents),
-                                'line_total' => CartService::fromCents($lineCents)];
-                    $fingerprintSource[] = $pid . ':' . $qty . ':' . CartService::fromCents($priceCents);
+                                'line_total' => CartService::fromCents($lineCents), 'message' => $message];
+                    $fingerprintSource[] = CartService::fingerprintPart($pid, $qty, CartService::fromCents($priceCents), $message);
                 }
                 $deliveryCents = CartService::deliveryFeeCents($subtotalCents);
                 $totalCents = $subtotalCents + $deliveryCents;
@@ -193,12 +210,12 @@ final class OrderService
                 // 5. Item snapshots + stock reduction (with ledger rows)
                 foreach ($lines as $line) {
                     Database::execute(
-                        'INSERT INTO order_items (order_id, product_id, product_name, product_sku, unit_price, quantity, line_total)
-                         VALUES (:oid, :pid, :name, :sku, :price, :qty, :line)',
+                        'INSERT INTO order_items (order_id, product_id, product_name, product_sku, unit_price, quantity, line_total, customization_text)
+                         VALUES (:oid, :pid, :name, :sku, :price, :qty, :line, :custom)',
                         [
                             'oid' => $orderId, 'pid' => (int) $line['product']['id'], 'name' => $line['product']['name'],
                             'sku' => $line['product']['sku'], 'price' => $line['price'], 'qty' => $line['quantity'],
-                            'line' => $line['line_total'],
+                            'line' => $line['line_total'], 'custom' => $line['message'] !== '' ? $line['message'] : null,
                         ]
                     );
                     InventoryService::adjust((int) $line['product']['id'], -$line['quantity'], 'order_placed', $orderId, $userId,
@@ -237,6 +254,7 @@ final class OrderService
         }
 
         Logger::info('Order placed', ['order' => $orderNumber, 'user_id' => $userId]);
+        EmailService::orderPlaced($orderNumber);
         return ['order_number' => $orderNumber];
     }
 
@@ -403,7 +421,11 @@ final class OrderService
             return 'This order can no longer be cancelled online because the store has already started working on it. Please contact the store.';
         }
         $reason = trim(mb_substr($reason, 0, 300));
-        return self::changeStatus((int) $order['id'], 'cancelled', $userId,
-            'Cancelled by customer' . ($reason !== '' ? ': ' . $reason : ''), 'pending');
+        $note = 'Cancelled by customer' . ($reason !== '' ? ': ' . $reason : '');
+        $error = self::changeStatus((int) $order['id'], 'cancelled', $userId, $note, 'pending');
+        if ($error === null) {
+            EmailService::orderStatusChanged((int) $order['id'], 'cancelled', $note);
+        }
+        return $error;
     }
 }

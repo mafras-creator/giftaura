@@ -2,7 +2,7 @@
 /**
  * GiftAura - shopping cart.
  * GET  : show the cart with live prices and stock checks.
- * POST : action=add|update|remove (CSRF protected), then redirect back.
+ * POST : action=add|update|message|remove (CSRF protected), then redirect back.
  */
 declare(strict_types=1);
 require dirname(__DIR__) . '/app/bootstrap.php';
@@ -15,11 +15,14 @@ if (is_post()) {
 
     switch ($action) {
         case 'add':
-            $result = CartService::add($productId, $quantity);
+            $customText = mb_substr(post_string('customization_text'), 0, 2000);
+            $result = CartService::add($productId, $quantity, $customText);
             Flash::add($result['ok'] ? 'success' : 'error', $result['message']);
             // If adding failed, go back to the page the customer came from so they see why.
             $back = post_string('return');
             if (!$result['ok'] && $back !== '') {
+                // Keep what was typed, so the customer can correct it instead of typing it again.
+                $_SESSION['custom_old'] = ['product_id' => $productId, 'text' => $customText];
                 header('Location: ' . safe_next($back, 'cart.php'), true, 303);
                 exit;
             }
@@ -27,6 +30,11 @@ if (is_post()) {
 
         case 'update':
             $result = CartService::update($productId, $quantity);
+            Flash::add($result['ok'] ? 'success' : 'error', $result['message']);
+            redirect('cart.php');
+
+        case 'message':
+            $result = CartService::setMessage($productId, mb_substr(post_string('customization_text'), 0, 2000));
             Flash::add($result['ok'] ? 'success' : 'error', $result['message']);
             redirect('cart.php');
 

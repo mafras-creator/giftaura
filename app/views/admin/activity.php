@@ -28,6 +28,7 @@
                         'product'  => $l['entity_id'] ? url('admin/product-edit.php', ['id' => $l['entity_id']]) : null,
                         'customer' => $l['entity_id'] ? url('admin/customer.php', ['id' => $l['entity_id']]) : null,
                         'category' => $l['entity_id'] ? url('admin/categories.php', ['edit' => $l['entity_id']]) : null,
+                        'banner'   => $l['entity_id'] ? url('admin/banners.php', ['edit' => $l['entity_id']]) : null,
                         default    => null,
                     };
                     ?>

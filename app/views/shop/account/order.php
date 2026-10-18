@@ -40,6 +40,12 @@ $canSendReference = ($payment['method'] ?? '') === 'bank_transfer'
                                         <?php else: ?>
                                             <?= e($item['product_name']) ?>
                                         <?php endif; ?>
+                                        <?= View::partial('custom-note', ['text' => (string) ($item['customization_text'] ?? '')]) ?>
+                                        <?php if ($order['status'] === 'delivered' && $item['product_id'] !== null): ?>
+                                            <p class="review-link">
+                                                <a href="<?= e(url('account/review.php', ['product' => $item['product_id']])) ?>"><?= in_array((int) $item['product_id'], $reviewed, true) ? 'Edit your review' : '★ Write a review' ?></a>
+                                            </p>
+                                        <?php endif; ?>
                                     </td>
                                     <td class="num"><?= e(money($item['unit_price'])) ?></td>
                                     <td class="num"><?= e((string) $item['quantity']) ?></td>

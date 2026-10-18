@@ -27,7 +27,13 @@ if (is_post()) {
     if (isset($result['id'])) {
         Auth::loginById($result['id']);
         CartService::mergeSessionCart($result['id']);
-        Flash::add('success', 'Your account has been created. Welcome to GiftAura!');
+        $wished = WishlistService::addPending(current_user() ?? ['id' => $result['id'], 'role' => 'customer']);
+        if ($wished !== null) {
+            Flash::add('success', '"' . $wished . '" was saved to your wishlist.');
+        }
+        EmailService::sendVerification($result['id']);
+        Flash::add('success', 'Your account has been created. We sent a verification link to '
+            . mb_strtolower(trim((string) $input['email'])) . ' — please open it before placing an order.');
         redirect('account/');
     }
     $errors = $result['errors'];

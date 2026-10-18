@@ -3,14 +3,63 @@
 (function () {
     'use strict';
 
-    // Mobile navigation toggle
-    var toggle = document.querySelector('[data-nav-toggle]');
-    var nav = document.getElementById('site-nav');
-    if (toggle && nav) {
-        toggle.addEventListener('click', function () {
-            var open = nav.classList.toggle('is-open');
-            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    // "All categories" menu: open/close, close with Escape or a click outside
+    var catToggle = document.querySelector('[data-catmenu-toggle]');
+    var catPanel = document.getElementById('catmenu-panel');
+    if (catToggle && catPanel) {
+        var setCatMenu = function (open) {
+            catPanel.hidden = !open;
+            catToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        };
+        catToggle.addEventListener('click', function () { setCatMenu(catPanel.hidden); });
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && !catPanel.hidden) { setCatMenu(false); catToggle.focus(); }
         });
+        document.addEventListener('click', function (event) {
+            if (!catPanel.hidden && !catPanel.contains(event.target) && !catToggle.contains(event.target)) { setCatMenu(false); }
+        });
+    }
+
+    // Homepage banner slider
+    var slider = document.querySelector('[data-slider]');
+    if (slider) {
+        var slides = slider.querySelectorAll('[data-slide]');
+        var dots = slider.querySelectorAll('[data-slide-to]');
+        var current = 0;
+        var timer = null;
+        var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var show = function (index) {
+            if (!slides.length) { return; }
+            current = (index + slides.length) % slides.length;
+            slides.forEach(function (slide, i) {
+                var active = i === current;
+                slide.classList.toggle('is-active', active);
+                slide.setAttribute('aria-hidden', active ? 'false' : 'true');
+                slide.querySelectorAll('a, button').forEach(function (el) { el.tabIndex = active ? 0 : -1; });
+            });
+            dots.forEach(function (dot, i) {
+                dot.classList.toggle('is-active', i === current);
+                if (i === current) { dot.setAttribute('aria-current', 'true'); } else { dot.removeAttribute('aria-current'); }
+            });
+        };
+        var stop = function () { if (timer) { clearInterval(timer); timer = null; } };
+        var start = function () {
+            stop();
+            if (!reduceMotion && slides.length > 1) { timer = setInterval(function () { show(current + 1); }, 6000); }
+        };
+        var prev = slider.querySelector('[data-slide-prev]');
+        var next = slider.querySelector('[data-slide-next]');
+        if (prev) { prev.addEventListener('click', function () { show(current - 1); start(); }); }
+        if (next) { next.addEventListener('click', function () { show(current + 1); start(); }); }
+        dots.forEach(function (dot) {
+            dot.addEventListener('click', function () { show(parseInt(dot.getAttribute('data-slide-to'), 10)); start(); });
+        });
+        slider.addEventListener('mouseenter', stop);
+        slider.addEventListener('mouseleave', start);
+        slider.addEventListener('focusin', stop);
+        slider.addEventListener('focusout', start);
+        show(0);
+        start();
     }
 
     // Show / hide password fields
@@ -119,5 +168,19 @@
             b.removeAttribute('aria-busy');
             if (b.hasAttribute('data-original-text')) { b.textContent = b.getAttribute('data-original-text'); }
         });
+    });
+
+    // Personalisation box: live "characters left" counter.
+    document.querySelectorAll('textarea[data-char-count]').forEach(function (box) {
+        var counter = box.parentNode.querySelector('[data-char-counter]');
+        var max = parseInt(box.getAttribute('maxlength'), 10) || 0;
+        if (!counter || !max) { return; }
+        var update = function () {
+            var left = max - box.value.length;
+            counter.textContent = left + ' of ' + max + ' characters left';
+            counter.classList.toggle('is-low', left <= 10);
+        };
+        box.addEventListener('input', update);
+        update();
     });
 })();

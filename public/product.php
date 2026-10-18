@@ -14,10 +14,22 @@ if ($product === null) {
 
 $category = CategoryService::findById($product['category_id']);
 
+// Message the customer typed before an "add to cart" error (shown again so it can be corrected).
+$customOld = '';
+if (isset($_SESSION['custom_old']) && is_array($_SESSION['custom_old'])) {
+    if ((int) ($_SESSION['custom_old']['product_id'] ?? 0) === $product['id']) {
+        $customOld = (string) ($_SESSION['custom_old']['text'] ?? '');
+    }
+    unset($_SESSION['custom_old']);
+}
+
 View::render('shop/product', [
     'title'   => $product['name'],
     'product' => $product,
     'images'  => ProductService::images($product['id']),
     'trail'   => $category ? CategoryService::trail($category) : [],
-    'related' => ProductService::related($product),
+    'related' => ProductService::related($product, 10),
+    'reviewSummary' => ReviewService::summary($product['id']),
+    'reviews' => ReviewService::forProduct($product['id'], ctype_digit(query_string('rpage')) ? (int) query_string('rpage') : 1),
+    'customOld' => $customOld !== '' ? $customOld : (CartService::messages()[$product['id']] ?? ''),
 ]);

@@ -4,8 +4,19 @@ config/config.php
 # Runtime files
 storage/logs/*
 !storage/logs/.gitkeep
+# Test-mode e-mails contain customer data and links
+storage/mail/*
+!storage/mail/.gitkeep
 public/uploads/products/*
 !public/uploads/products/.gitkeep
+public/uploads/banners/*
+!public/uploads/banners/.gitkeep
+public/uploads/categories/*
+!public/uploads/categories/.gitkeep
+public/uploads/brand/*
+!public/uploads/brand/.gitkeep
+public/uploads/people/*
+!public/uploads/people/.gitkeep
 
 # Editor and Windows files
 .vscode/
@@ -22,3 +33,7 @@ backups/
 tests/test.db
 tests/*.jar
 tests/*.txt
+tests/*.jpg
+tests/*.png
+tests/shell.php
+tests/giftaura

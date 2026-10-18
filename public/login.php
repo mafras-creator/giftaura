@@ -27,6 +27,10 @@ if (is_post()) {
             $user = current_user();
             CartService::mergeSessionCart($user['id']);
             Flash::add('success', 'Welcome back, ' . $user['full_name'] . '.');
+            $wished = WishlistService::addPending($user);
+            if ($wished !== null) {
+                Flash::add('success', '"' . $wished . '" was saved to your wishlist.');
+            }
             $fallback = $user['role'] === 'admin' ? 'admin/' : 'account/';
             header('Location: ' . safe_next($next, $fallback), true, 303);
             exit;

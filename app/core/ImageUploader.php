@@ -12,6 +12,9 @@
  * anything hidden inside the original (for example PHP code in metadata),
  * strips EXIF data (such as GPS location) and limits the size to 1600 px.
  * The new file gets a random 32-character name; the original name is never used.
+ *
+ * Folders: 'products' (max 1600 px), 'banners' (homepage slides, max 2400 px
+ * wide, at least 1000 px wide) and 'categories' (round category icons, 600 px).
  * The uploads folder also refuses to run scripts (public/uploads/.htaccess).
  */
 declare(strict_types=1);
@@ -29,10 +32,26 @@ final class ImageUploader
         'image/webp' => ['ext' => 'webp', 'extensions' => ['webp']],
     ];
 
-    /** Folder where product images are stored. */
-    public static function directory(): string
+    /** Allowed upload folders => longest side after resizing. */
+    public const FOLDERS = ['products' => 1600, 'banners' => 2400, 'categories' => 600, 'brand' => 800, 'people' => 600];
+
+    /** Folder where images of this kind are stored. */
+    public static function directory(string $folder = 'products'): string
     {
-        return APP_ROOT . '/public/uploads/products';
+        if (!isset(self::FOLDERS[$folder])) {
+            throw new InvalidArgumentException('Unknown upload folder.');
+        }
+        return APP_ROOT . '/public/uploads/' . $folder;
+    }
+
+    /** Public URL of a stored image, or null when the name is not valid or the file is missing. */
+    public static function url(?string $fileName, string $folder): ?string
+    {
+        if ($fileName !== null && preg_match('/^[a-f0-9]{32}\.(jpg|png|webp)$/', $fileName)
+            && is_file(self::directory($folder) . '/' . $fileName)) {
+            return url('uploads/' . $folder . '/' . $fileName);
+        }
+        return null;
     }
 
     /**
@@ -40,8 +59,9 @@ final class ImageUploader
      * Returns ['file' => 'abc...123.jpg'] or ['error' => 'message'].
      * $skipUploadCheck is only for automated tests (files not sent by a browser).
      */
-    public static function store(array $file, bool $skipUploadCheck = false): array
+    public static function store(array $file, bool $skipUploadCheck = false, string $folder = 'products', int $minWidth = 0): array
     {
+        $dir = self::directory($folder);
         $error = $file['error'] ?? UPLOAD_ERR_NO_FILE;
         if ($error === UPLOAD_ERR_NO_FILE) {
             return ['error' => 'Choose an image to upload.'];
@@ -79,6 +99,9 @@ final class ImageUploader
         if ($width > self::MAX_SIDE_IN || $height > self::MAX_SIDE_IN) {
             return ['error' => 'The image is too large. Use at most ' . self::MAX_SIDE_IN . ' × ' . self::MAX_SIDE_IN . ' pixels.'];
         }
+        if ($width < $minWidth) {
+            return ['error' => 'The image is too narrow. Use an image at least ' . $minWidth . ' pixels wide (recommended 1920 × 600).'];
+        }
 
         if (!extension_loaded('gd')) {
             return ['error' => 'Image processing (GD) is not enabled on the server.'];
@@ -92,8 +115,8 @@ final class ImageUploader
             return ['error' => 'This image could not be read. Try saving it again as JPG or PNG.'];
         }
 
-        // Resize (keeping proportions) so the longest side is at most 1600 px.
-        $scale = min(1, self::MAX_SIDE_OUT / max($width, $height));
+        // Resize (keeping proportions) so the longest side is at most the folder's limit.
+        $scale = min(1, self::FOLDERS[$folder] / max($width, $height));
         $newW = max(1, (int) round($width * $scale));
         $newH = max(1, (int) round($height * $scale));
         $canvas = imagecreatetruecolor($newW, $newH);
@@ -104,7 +127,6 @@ final class ImageUploader
         }
         imagecopyresampled($canvas, $source, 0, 0, 0, 0, $newW, $newH, $width, $height);
 
-        $dir = self::directory();
         if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
             return ['error' => 'The upload folder could not be created.'];
         }
@@ -126,10 +148,10 @@ final class ImageUploader
     }
 
     /** Delete a stored image file (only names that match the generated pattern). */
-    public static function delete(string $fileName): void
+    public static function delete(string $fileName, string $folder = 'products'): void
     {
         if (preg_match('/^[a-f0-9]{32}\.(jpg|png|webp)$/', $fileName)) {
-            $path = self::directory() . '/' . $fileName;
+            $path = self::directory($folder) . '/' . $fileName;
             if (is_file($path)) {
                 @unlink($path);
             }

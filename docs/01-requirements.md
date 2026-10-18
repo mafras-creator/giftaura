@@ -4,7 +4,7 @@
 |---|---|
 | Project | E-Commerce Web System for GiftAura (MIT final-year Software Development Project, South Eastern University of Sri Lanka) |
 | Document | Functional and non-functional requirements, business rules, scope |
-| Version | 1.6 — updated at end of Phase 8 (all requirements built and tested) |
+| Version | 1.8 — e-mail extension and design refresh added 17 Oct 2026 (Phase column "E" = e-mail extension, "D" = design refresh, "S" = sale prices and wishlist) |
 | Stack | HTML5, CSS3, vanilla JavaScript, PHP 8.2, MariaDB 10.4, Apache (XAMPP) |
 
 **Status key:** `Planned` → `Built` → `Tested` (the test cases that prove each requirement are listed in `docs/test-plan.md` §7). This table is updated at the end of every phase. Nothing is marked `Tested` unless a test was actually executed.
@@ -76,6 +76,35 @@
 | FR-47 | View inventory movement history (per product and overall) and the admin activity log. | 6 | Tested |
 | FR-48 | Edit store settings: contact details, delivery fee, free-delivery threshold, payment methods on/off, bank details. | 6 | Tested |
 | FR-49 | Create the first administrator from a command-line script only (no default admin account, no public admin registration). | 3 | Tested |
+
+### 3.1 E-mail (added 17 Oct 2026, after Phase 9)
+
+| ID | Requirement | Phase | Status |
+|---|---|---|---|
+| FR-50 | After registering, the customer receives an e-mail with a one-time link (valid 24 h) to verify the e-mail address. The customer can ask for a new link (at most 3 per hour). | E | Tested |
+| FR-51 | A customer can browse, log in and fill the cart before verifying, but cannot check out until the address is verified (enforced on the checkout page and again when the order is saved). | E | Tested |
+| FR-52 | "Forgotten your password?": a customer receives a one-time reset link (valid 60 min) and chooses a new password. The page gives the same answer whether or not the address has an account. | E | Tested |
+| FR-53 | The customer receives an e-mail when an order is placed (items, totals, delivery address, bank details for transfers) and when it is confirmed, being prepared, ready for delivery, delivered or cancelled. | E | Tested |
+| FR-54 | The customer receives an e-mail when a payment is marked paid, failed or refunded. | E | Tested |
+| FR-55 | Every e-mail attempt is recorded (Admin → E-mail log, with result sent / saved / skipped / failed). A failed e-mail never stops an order; the dashboard warns about failures. | E | Tested |
+| FR-56 | The administrator sees whether a customer's address is verified, can send the link again and can mark an address as verified (recorded in the activity log). | E | Tested |
+| FR-57 | E-mail mode is chosen on the server with `scripts/setup_mail.php`: **test mode** (saved as files, the default), **Gmail** (SMTP with an App Password) or **off**. | E | Tested in test mode and against a local test SMTP server; real Gmail sending is tested on the laptop (M-30) |
+
+### 3.2 Design refresh and homepage banners (added 17 Oct 2026)
+
+| ID | Requirement | Phase | Status |
+|---|---|---|---|
+| FR-58 | The administrator manages homepage banners (Admin → Banners): upload a wide picture, title, short text, button text and link, display order, optional start and end dates, show/hide, delete. Up to 6 active banners rotate on the homepage; with none, a welcome section is shown. | D | Tested |
+| FR-59 | The administrator can give each category a picture; the homepage shows round category pictures (a product photo is used when no picture is set). | D | Tested |
+| FR-61 | When adding a product, the administrator can upload up to 4 photos at once; each product has at most 4 photos (more can be chosen at once on the edit page while places are free). | D | Tested |
+| FR-62 | Sale prices: the administrator enters a normal price and an optional lower sale price. Customers pay the sale price; the shop shows the normal price crossed out, a "-25%" badge and "You save", and an **On sale** page/filter lists all discounted products. Orders keep the price actually paid. | S | Tested |
+| FR-63 | Wishlist: a heart button on every product picture (cards and product page). Customers save/remove products and see them in My account → My wishlist; a guest who presses the heart logs in first and the product is then saved. | S | Tested |
+| FR-64 | The administrator uploads the shop logo in Settings (checked and re-encoded like product photos); it is used in the shop header, admin panel, error pages and browser tab, and can be reset to the default. | D | Tested |
+| FR-65 | About page in the style of the reference: hero with logo, location and live numbers; our story with founder card (Asjadh Mohamed Mafras, photo or initials, quote); mission and vision; what we offer; location Bandarakoswatta, Kurunegala with Google map. All texts and the founder photo are edited in Admin → About page. | D | Tested |
+| FR-66 | "Popular categories" mosaic of coloured tiles near the bottom of the homepage (short line, name, picture); the administrator chooses up to 6 categories and their lines in Admin → Categories. | D | Tested |
+| FR-67 | Personalised products: the administrator marks a product as customisable and sets the question shown to the customer, the longest message (10–500 characters) and whether a message is required. The card shows "Personalisable" and a **Personalise** button; the product page has a message box with a live character counter; the message is kept with the cart line (editable in the cart, kept when a guest logs in), checked again at checkout, saved with the order item as a snapshot and shown on the confirmation, My order, admin order pages and in the order e-mail. One message per product per order. | C | Tested |
+| FR-68 | Product reviews: a customer can rate (1–5 stars) and comment on a product only after an order containing it has been **delivered** (checked again on every save); one review per customer per product, editable and deletable in My account → My reviews (also linked from the delivered order and the "delivered" e-mail). Reviews show at once under the product with the average, star bars, first name + initial and "Verified purchase"; cards show the average and count. The administrator can filter, hide/show and delete reviews (Admin → Reviews, activity log). | R | Tested |
+| FR-60 | Shop design: purple header with a large search bar, "All categories" menu, yellow **Add to cart** buttons on product cards and product pages, "Similar products" on product pages, layout usable on phones. | D | Tested (automated + screenshots); on the laptop M-35 – M-38 |
 
 ## 4. Non-functional requirements
 
@@ -166,8 +195,9 @@ Date ranges are inclusive of both start and end dates, in Asia/Colombo time.
 | Item | Decision | Reason |
 |---|---|---|
 | Online card payments | **Not included** | No payment provider account; the brief forbids claiming a payment integration that is not real. The `payments` table is ready for a future gateway. |
-| Password reset by email | **Not included** in this version | Requires a working outgoing mail server, which a local XAMPP install does not have. A half-working reset would be insecure. An administrator can set a temporary password for a customer instead (FR-44). |
+| Password reset by email | **Added** on 17 Oct 2026 (FR-52) | Uses Gmail through an App Password. The administrator's temporary password (FR-44) remains as a fallback. Administrators cannot reset their password by e-mail (by design). |
 | Discounts / coupons | Column present (`discount_amount`, always 0) | Not in the approved proposal; structure allows adding it later. |
 | Guest checkout | Not included | Order history and tracking need an account; guests can browse and fill a cart. |
 | Product reviews, wishlists | Not included | Not in the approved proposal. |
-| Email / SMS notifications | Not included | No mail/SMS service locally; order status is visible in the customer account. |
+| Email notifications | **Added** on 17 Oct 2026 (FR-50–FR-57) | Sent through Gmail; in test mode they are saved as files so the whole flow can be checked without internet. |
+| SMS notifications | Not included | Needs a paid SMS gateway account. |

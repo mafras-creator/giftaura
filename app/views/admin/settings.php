@@ -11,6 +11,35 @@ foreach ($rows as $row) {
     $byKey[$row['setting_key']] = $row;
 }
 ?>
+<section class="admin-panel">
+    <header class="admin-panel__header"><h2 class="admin-panel__title">Logo</h2></header>
+    <div class="panel-body logo-settings">
+        <div class="logo-settings__preview">
+            <img src="<?= e(BrandService::logoUrl()) ?>" alt="Current logo" height="80">
+            <p class="hint"><?= BrandService::hasCustomLogo() ? 'Your uploaded logo' : 'Default GiftAura logo' ?><?= BrandService::isWide() ? ' (wide: the store name text is hidden next to it)' : '' ?></p>
+        </div>
+        <form method="post" action="<?= e(url('admin/settings.php')) ?>" enctype="multipart/form-data" class="admin-form">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="logo_upload">
+            <input type="hidden" name="MAX_FILE_SIZE" value="<?= e((string) ImageUploader::MAX_BYTES) ?>">
+            <div class="field">
+                <label for="logo">Upload a new logo</label>
+                <input type="file" id="logo" name="logo" accept="image/png,image/jpeg,image/webp" required data-image-preview>
+                <p class="hint">PNG with a transparent background works best (JPG and WebP also work), up to 2 MB, at least 100 × 100 px. A <strong>square</strong> logo is shown next to the store name; a <strong>wide</strong> logo that already contains the name is shown on its own. It is also used as the small icon in the browser tab.</p>
+                <img class="upload-preview is-hidden" alt="" data-preview-target width="120" height="120">
+            </div>
+            <button type="submit" class="btn btn--primary btn--small" data-loading-text="Uploading…">Upload logo</button>
+        </form>
+        <?php if (BrandService::hasCustomLogo()): ?>
+            <form method="post" action="<?= e(url('admin/settings.php')) ?>" data-confirm="Go back to the default GiftAura logo?">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="logo_reset">
+                <button type="submit" class="btn btn--ghost btn--small">Use the default logo</button>
+            </form>
+        <?php endif; ?>
+    </div>
+</section>
+
 <form method="post" action="<?= e(url('admin/settings.php')) ?>" class="settings-form" novalidate>
     <?= csrf_field() ?>
     <?php if ($errors !== []): ?>

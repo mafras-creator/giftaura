@@ -5,7 +5,11 @@ An online shop for the GiftAura gift store: flower bouquets, beauty creams and g
 
 **Stack:** HTML5 · CSS3 · vanilla JavaScript · PHP 8.2 · MariaDB 10.4 · Apache (XAMPP). No frameworks and no Composer packages.
 
-> **Project status: complete (Phase 9).** All 65 requirements are built and tested: 48 unit checks, 160 automated end-to-end checks, 43 checks on the real XAMPP server and 25 manual acceptance tests all passed (see `docs/test-plan.md`).
+> **Project status: complete (Phase 9).** All 65 original requirements are built and tested: 48 unit checks, 160 automated end-to-end checks, 43 checks on the real XAMPP server and 25 manual acceptance tests all passed (see `docs/test-plan.md`).
+>
+> **Design refresh (17 Oct 2026):** purple header with a large search bar, "All categories" menu, homepage banners managed in **Admin → Banners**, round category pictures, yellow **Add to cart** buttons (FR-58 – FR-60). Automated: 91 new checks passed; laptop checks M-35 – M-39 pending.
+>
+> **E-mail extension (17 Oct 2026):** e-mail verification before checkout, password reset by e-mail, order and payment e-mails, and an e-mail log (FR-50 – FR-57). Automated tests: 58 + 107 + 69 end-to-end and 17 unit checks passed. Real Gmail sending and the laptop checks (M-26 – M-34) are still to be run — see section 2.8 and 9.
 
 ## Features at a glance
 
@@ -16,7 +20,12 @@ An online shop for the GiftAura gift store: flower bouquets, beauty creams and g
 | Cart (kept after login), quantity limits, live totals and delivery charge | Stock restock/corrections with a full stock ledger and low-stock alerts |
 | Checkout with saved addresses, Cash on delivery or bank transfer | Order workflow Pending → Confirmed → Processing → Ready → Delivered / Cancelled |
 | Order reference, order history, progress tracking, cancel while pending | Payment recording: paid, failed, refunded (with who and when) |
-| Bank-transfer reference submission; public order tracking | Customers: details, orders, deactivate, temporary password |
+| Bank-transfer reference submission; public order tracking | Customers: details, orders, deactivate, temporary password, e-mail verified or not |
+| E-mail verification, password reset by e-mail, order and payment e-mails | E-mail log with the result of every e-mail; Gmail or test mode |
+| Homepage banner slider, round category pictures, yellow Add to cart | Banners (pictures, links, dates) and category pictures |
+| Sale prices (old price crossed out, -% badge, On sale page) and wishlist (heart on every product picture) | Normal + sale price per product |
+| Personalised products: "Personalisable" badge, Personalise button and message box; message kept in cart, order, e-mails and admin order page | Personalisation box in the product form (question, length, required) |
+| Product reviews: only after delivery, from My account → My reviews; stars and average on product cards; review section under each product | Admin → Reviews: filter, hide/show, delete |
 | Profile, password and address book | Reports for any date range with CSV export; activity log; store settings |
 
 ---
@@ -76,7 +85,17 @@ Run it again any time to add another administrator (one per staff member).
 ```
 C:\xampp\php\php.exe scripts\system_check.php
 ```
-All checks should pass. It tests the database rules, the security of private folders, and page speed, without changing any data.
+All checks should pass. It tests the database rules, the security of private folders, e-mail settings and page speed, without changing any data.
+
+### 2.8 E-mail (optional, can be done later)
+E-mails start in **test mode**: nothing is sent, and each e-mail is saved as a file in `storage\mail\` that you can double-click to read. Customers must open their verification link before they can check out, so in test mode open the link from that file.
+
+To send real e-mails from a Gmail account:
+1. Google Account → **Security** → turn on **2-Step Verification** → **App passwords** → create one named *GiftAura* → copy the 16 letters. (Your normal Gmail password does **not** work.)
+2. `C:\xampp\php\php.exe scripts\setup_mail.php` → choose **2** → enter the Gmail address and the App Password.
+3. `C:\xampp\php\php.exe scripts\test_mail.php` → enter your own address → `[OK] Sent` → check the inbox (and Spam).
+
+The App Password is stored only in `config/config.php`, which is never committed to Git. Problems: `docs/troubleshooting.md` §5.
 
 ## 3. Daily use
 
@@ -93,9 +112,9 @@ giftaura/
 ├── public/     only folder reachable from the browser (pages, admin, assets, uploads)
 ├── app/        PHP core classes, services and templates (blocked from the browser)
 ├── config/     database settings (config.php is not committed to Git)
-├── sql/        00_create_database_and_user.sql, schema.sql, seed.sql
+├── sql/        00_create_database_and_user.sql, schema.sql, seed.sql, updates/
 ├── scripts/    command-line tools
-├── storage/    logs
+├── storage/    logs, and e-mails saved in test mode (storage/mail)
 ├── tests/      automated test scripts (blocked from the browser)
 └── docs/       requirements, architecture, database design, diagrams, guides
 ```
@@ -122,7 +141,7 @@ Full tree: `docs/04-file-structure.md`.
 
 ## 6. Payments
 
-Cash on Delivery and manual bank transfer (verified by an administrator). **No online card payment gateway is integrated**, and the website never asks for card details. Known limitations and possible improvements are listed in `docs/security-checklist.md` §7.
+Cash on Delivery and manual bank transfer (verified by an administrator). **No online card payment gateway is integrated**, and the website never asks for card details. Known limitations and possible improvements are listed in `docs/security-checklist.md` §8.
 
 ## 7. Sample data
 
@@ -137,3 +156,13 @@ git commit -m "Phase N: <summary>"
 git log --oneline
 ```
 `config/config.php`, logs, uploaded images and backups are excluded by `.gitignore`.
+
+## 9. Updating an existing installation (e-mail + design refresh)
+
+If GiftAura was installed **before 17 Oct 2026**:
+1. Take a backup (`scripts\backup.bat`).
+2. Copy the new files over the project folder (your `config/config.php` and uploaded photos are kept).
+3. phpMyAdmin → click **giftaura_db** → **SQL** tab → paste the contents of `sql/updates/2026-10-17_email.sql` → **Go**. Then do the same with `sql/updates/2026-10-17_banners.sql`, `sql/updates/2026-10-17_sale_wishlist.sql` `sql/updates/2026-10-18_customization.sql` and `sql/updates/2026-10-18_reviews.sql` (one block at a time; expected result: **20** tables). Log in to phpMyAdmin as `root` (the default) — `giftaura_app` is not allowed to change tables. Existing accounts are marked as verified.
+4. Add the e-mail settings: `C:\xampp\php\php.exe scripts\setup_mail.php` → **1** (test mode) for now. This also adds `site_url` to your config.
+5. `C:\xampp\php\php.exe scripts\system_check.php` → all checks should pass.
+6. Commit: `git add -A` then `git commit -m "E-mail verification, password reset and order e-mails"`.

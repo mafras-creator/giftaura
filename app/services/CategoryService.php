@@ -16,7 +16,7 @@ final class CategoryService
     {
         if (self::$all === null) {
             self::$all = Database::fetchAll(
-                'SELECT c.id, c.parent_id, c.name, c.slug, c.description, c.sort_order,
+                'SELECT c.id, c.parent_id, c.name, c.slug, c.description, c.image_file, c.sort_order,
                         (SELECT COUNT(*) FROM products p WHERE p.category_id = c.id AND p.is_active = 1) AS product_count
                    FROM categories c
                   WHERE c.is_active = 1
@@ -43,7 +43,7 @@ final class CategoryService
      * 'total_count' (its own products plus its subcategories' products).
      * A subcategory whose parent is inactive is hidden.
      */
-    public static function tree(): array
+    public static function tree(bool $withPictures = false): array
     {
         $tree = [];
         foreach (self::topLevel() as $parent) {
@@ -53,6 +53,9 @@ final class CategoryService
             ));
             $parent['total_count'] = $parent['product_count']
                 + array_sum(array_column($parent['children'], 'product_count'));
+            if ($withPictures) {
+                $parent['picture'] = self::picture($parent);
+            }
             $tree[] = $parent;
         }
         return $tree;
@@ -117,5 +120,33 @@ final class CategoryService
             }
         }
         return $trail;
+    }
+
+    /**
+     * Picture for a top-level category: its own uploaded picture, otherwise
+     * the main photo of one of its (or its subcategories') active products,
+     * otherwise the placeholder.
+     */
+    public static function picture(array $category): string
+    {
+        $own = ImageUploader::url($category['image_file'] ?? null, 'categories');
+        if ($own !== null) {
+            return $own;
+        }
+        $ids = self::idsIncludingChildren((int) $category['id']);
+        $params = [];
+        $in = [];
+        foreach ($ids as $i => $id) {
+            $in[] = ':c' . $i;
+            $params['c' . $i] = $id;
+        }
+        $file = Database::fetchValue(
+            'SELECT pi.file_name FROM products p JOIN product_images pi ON pi.product_id = p.id AND pi.is_primary = 1
+              WHERE p.is_active = 1 AND p.category_id IN (' . implode(', ', $in) . ')
+              ORDER BY p.is_featured DESC, p.stock_quantity > 0 DESC, p.id
+              LIMIT 1',
+            $params
+        );
+        return product_image_url(is_string($file) ? $file : null);
     }
 }

@@ -24,6 +24,14 @@ final class View
         echo self::capture('layouts/' . $layout, $data + ['content' => $content]);
     }
 
+    /** Render a template inside a layout and return it as a string (used for e-mails). */
+    public static function fetch(string $template, array $data = []): string
+    {
+        $layout = $data['layout'] ?? false;
+        $content = self::capture($template, $data);
+        return $layout === false ? $content : self::capture('layouts/' . $layout, $data + ['content' => $content]);
+    }
+
     /** Render a partial and return it as a string (e.g. a product card). */
     public static function partial(string $template, array $data = []): string
     {

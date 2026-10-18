@@ -169,6 +169,7 @@ $useNew = ($old['address_id'] ?? 'new') === 'new' || $addresses === [];
                     <li>
                         <span><?= e($line['name']) ?> <span class="muted">&times; <?= e((string) $line['quantity']) ?></span></span>
                         <span><?= e(money($line['line_total'])) ?></span>
+                        <?php if ($line['customizable']): ?><?= View::partial('custom-note', ['text' => $line['message'], 'label' => $line['custom_label']]) ?><?php endif; ?>
                     </li>
                 <?php endforeach; ?>
             </ul>

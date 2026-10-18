@@ -85,4 +85,55 @@
             if (b.hasAttribute('data-original-text')) { b.textContent = b.getAttribute('data-original-text'); }
         });
     });
+    // Categories form: button says what will be created
+    var categorySubmit = document.querySelector('[data-category-submit]');
+    var parentSelect = document.getElementById('parent_id');
+    if (categorySubmit && parentSelect) {
+        parentSelect.addEventListener('change', function () {
+            categorySubmit.textContent = parentSelect.value ? 'Add subcategory' : 'Add main category';
+        });
+    }
+    // Several photos at once: check the number and size, show small previews
+    document.querySelectorAll('input[type="file"][data-images-preview]').forEach(function (input) {
+        var strip = input.parentElement.querySelector('[data-preview-strip]');
+        var max = parseInt(input.getAttribute('data-max') || '4', 10);
+        input.addEventListener('change', function () {
+            if (strip) { strip.innerHTML = ''; }
+            var files = Array.prototype.slice.call(input.files || []);
+            if (files.length > max) {
+                window.alert('Please choose at most ' + max + ' photo(s).');
+                input.value = '';
+                return;
+            }
+            var tooBig = files.filter(function (f) { return f.size > 2 * 1024 * 1024; });
+            if (tooBig.length) {
+                window.alert(tooBig.map(function (f) { return f.name; }).join(', ') + ': larger than 2 MB. Please choose smaller photos.');
+                input.value = '';
+                return;
+            }
+            files.forEach(function (file, index) {
+                if (!strip) { return; }
+                var img = document.createElement('img');
+                img.alt = '';
+                img.width = 80;
+                img.height = 80;
+                img.className = 'preview-strip__img' + (index === 0 ? ' is-main' : '');
+                img.title = index === 0 ? 'Main photo' : file.name;
+                strip.appendChild(img);
+                var reader = new FileReader();
+                reader.onload = function (e) { img.src = e.target.result; };
+                reader.readAsDataURL(file);
+            });
+        });
+    });
+
+    // Product form: show the personalisation details only when the box is ticked.
+    document.querySelectorAll('[data-custom-box]').forEach(function (box) {
+        var toggle = box.querySelector('[data-custom-toggle]');
+        var details = box.querySelector('[data-custom-details]');
+        if (!toggle || !details) { return; }
+        var sync = function () { details.hidden = !toggle.checked; };
+        toggle.addEventListener('change', sync);
+        sync();
+    });
 })();

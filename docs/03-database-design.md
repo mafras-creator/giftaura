@@ -4,7 +4,7 @@ Version 1.0 — Phase 2. The authoritative definition is `sql/schema.sql`; this 
 
 - **DBMS:** MariaDB 10.4.32 (XAMPP), InnoDB engine, `utf8mb4_unicode_ci`
 - **Database:** `giftaura_db` · **Application user:** `giftaura_app` (SELECT, INSERT, UPDATE, DELETE only)
-- **Tables:** 15
+- **Tables:** 19 (15 from Phase 2; `user_tokens`, `email_log`, `banners` and `wishlist_items` added on 17 Oct 2026 — see `sql/updates/`)
 
 ## 1. Entity-relationship diagram
 
@@ -28,6 +28,11 @@ erDiagram
     ORDERS |o--o{ INVENTORY_MOVEMENTS : "causes"
     USERS |o--o{ INVENTORY_MOVEMENTS : "made by"
     USERS |o--o{ ADMIN_ACTIVITY_LOG : "performs"
+    USERS ||--o{ USER_TOKENS : "e-mail links"
+    USERS ||--o{ WISHLIST_ITEMS : "saves"
+    PRODUCTS ||--o{ WISHLIST_ITEMS : "saved as"
+    USERS |o--o{ EMAIL_LOG : "receives"
+    ORDERS |o--o{ EMAIL_LOG : "about"
 
     USERS {
         int id PK
@@ -36,6 +41,7 @@ erDiagram
         varchar email UK
         varchar phone
         varchar password_hash
+        datetime email_verified_at "NULL = not verified"
         tinyint is_active
         datetime last_login_at
         datetime created_at
@@ -67,6 +73,7 @@ erDiagram
         varchar name
         varchar slug UK
         varchar description
+        varchar image_file "round picture, optional"
         smallint sort_order
         tinyint is_active
     }
@@ -79,6 +86,7 @@ erDiagram
         varchar short_description
         text description
         decimal price "LKR, 10,2"
+        decimal compare_at_price "normal price when on sale"
         int stock_quantity "CHECK >= 0"
         int low_stock_threshold
         tinyint is_featured
@@ -174,15 +182,54 @@ erDiagram
         varchar ip_address
         datetime created_at
     }
+    WISHLIST_ITEMS {
+        int user_id PK, FK
+        int product_id PK, FK
+        datetime created_at
+    }
+    BANNERS {
+        int id PK
+        varchar title
+        varchar subtitle
+        varchar button_text
+        varchar link_url "shop page or https address"
+        varchar image_file "random name in uploads/banners"
+        tinyint show_text
+        smallint sort_order
+        tinyint is_active
+        date starts_on
+        date ends_on
+    }
     SETTINGS {
         varchar setting_key PK
         varchar setting_value
         enum value_type
         varchar label
     }
+    USER_TOKENS {
+        bigint id PK
+        int user_id FK
+        enum purpose "verify_email or reset_password"
+        char token_hash UK "SHA-256 of the secret"
+        datetime expires_at
+        datetime used_at
+        datetime created_at
+    }
+    EMAIL_LOG {
+        bigint id PK
+        int user_id FK
+        int order_id FK
+        varchar template
+        varchar recipient
+        varchar subject
+        enum transport "smtp, file, off"
+        enum status "sent, saved, skipped, failed"
+        varchar error
+        datetime created_at
+    }
 ```
 
-`LOGIN_ATTEMPTS` and `SETTINGS` have no relationships on purpose: login attempts are recorded even for email addresses that do not exist (so attackers cannot tell which emails are registered), and settings are simple key–value pairs.
+`LOGIN_ATTEMPTS`, `SETTINGS` and `BANNERS` have no relationships on purpose (a banner only points to a page by its link): login attempts are recorded even for email addresses that do not exist (so attackers cannot tell which emails are registered), and settings are simple key–value pairs.
 
 ## 2. Table summary
 
@@ -203,6 +250,12 @@ erDiagram
 | 13 | `inventory_movements` | Stock ledger | change ≠ 0; `stock_after ≥ 0` |
 | 14 | `admin_activity_log` | Audit trail of admin actions | FK admin (set NULL) |
 | 15 | `settings` | Editable store configuration | key is primary key |
+| 16 | `user_tokens` | One-time e-mail links (verify address, reset password) | `token_hash` unique (only the SHA-256 hash is stored); expiry; `used_at` makes a link single-use; FK user (cascade) |
+| 17 | `email_log` | Every e-mail attempt and its result | FK user and order (set NULL) so the log survives; no message bodies or links stored |
+| 18 | `banners` | Homepage slides managed in Admin → Banners | picture file name pattern CHECK; `ends_on ≥ starts_on`; link checked in PHP (shop page or http/https only) |
+| 19 | `wishlist_items` | Products saved by customers (heart button) | primary key (user, product) so a product is saved once; FKs cascade |
+
+`products.compare_at_price` is the normal price shown crossed out while a product is on sale (`price` is always what the customer pays). `categories.image_file` (design refresh) is the optional round picture of a category. `users.email_verified_at` (added with the e-mail extension) is `NULL` until the customer opens the verification link; checkout requires it.
 
 ## 3. Normalisation
 
@@ -235,6 +288,8 @@ The design is in **Third Normal Form (3NF)**:
 | customer_addresses → users | CASCADE | Addresses belong entirely to the user. |
 | status history / payments → orders | CASCADE | Only relevant if an order were removed in maintenance; normal use never deletes orders. |
 | `changed_by`, `recorded_by`, `admin_id`, `user_id` in logs | SET NULL | Logs survive if a user account is ever removed. |
+| user_tokens → users | CASCADE | A link is useless without its account. |
+| email_log → users / orders | SET NULL | The e-mail history survives. |
 
 ## 5. Rules enforced in PHP (not expressible as simple constraints)
 
@@ -248,4 +303,41 @@ The design is in **Third Normal Form (3NF)**:
 1. In phpMyAdmin → **SQL** tab, run `sql/00_create_database_and_user.sql` after replacing `CHANGE_THIS_PASSWORD` with your own password.
 2. Select `giftaura_db` → **Import** → `sql/schema.sql`.
 3. Select `giftaura_db` → **Import** → `sql/seed.sql`. The final query should show 4 categories, 11 products, 10 active products, 10 inventory movements and 17 settings.
-4. The first administrator is created later with `scripts/create_admin.php` (Phase 3). The seed data contains **no user accounts**.
+4. **Existing database from before 17 Oct 2026:** run `sql/updates/2026-10-17_email.sql` once (phpMyAdmin → `giftaura_db` → **SQL**, as `root`). It adds `users.email_verified_at` (existing accounts are marked verified), `user_tokens` and `email_log`. A new installation with the current `schema.sql` already has them.
+5. Then run `sql/updates/2026-10-17_banners.sql`, `sql/updates/2026-10-17_sale_wishlist.sql` and `sql/updates/2026-10-18_customization.sql` and `sql/updates/2026-10-18_reviews.sql` the same way.
+6. The first administrator is created later with `scripts/create_admin.php` (Phase 3). The seed data contains **no user accounts**.
+
+
+## Personalisation columns (18 Oct 2026)
+
+Added by `sql/updates/2026-10-18_customization.sql` (no new table):
+
+| Table | Column | Type | Meaning |
+|---|---|---|---|
+| products | is_customizable | TINYINT(1), default 0 | 1 = the customer types a personalisation message |
+| products | custom_label | VARCHAR(80) NULL | Question shown above the message box (empty = "Your personalised message") |
+| products | custom_max_length | SMALLINT, default 100 | Longest message, 10–500 characters (CHECK in schema.sql) |
+| products | custom_required | TINYINT(1), default 1 | 1 = the message must be filled in |
+| cart_items | customization_text | VARCHAR(500) NULL | Message for this cart line (guests: session `cart_msg`) |
+| order_items | customization_text | VARCHAR(500) NULL | Message ordered (snapshot, never changed by later product edits) |
+
+One message per product per cart/order, because `cart_items` and `order_items` keep their unique (cart/order, product) keys.
+
+
+## Table 20: product_reviews (18 Oct 2026)
+
+Added by `sql/updates/2026-10-18_reviews.sql`; the database now has **20 tables**.
+
+| Column | Type | Null | Key | Meaning |
+|---|---|---|---|---|
+| id | INT UNSIGNED | No | PK | Review number |
+| product_id | INT UNSIGNED | No | FK → products (CASCADE) | Product reviewed |
+| user_id | INT UNSIGNED | No | FK → users (CASCADE), UQ with product_id | Customer who wrote it — one review per customer per product |
+| order_id | INT UNSIGNED | Yes | FK → orders (SET NULL) | Delivered order that allowed the review |
+| rating | TINYINT UNSIGNED | No | CHECK 1–5 | Stars |
+| comment | VARCHAR(1000) | Yes | | Text (cleaned, always escaped when shown) |
+| reviewer_name | VARCHAR(60) | No | | Name shown, e.g. "Nimal P." (never the e-mail) |
+| is_visible | TINYINT(1) | No | | 0 = hidden by the administrator |
+| created_at, updated_at | DATETIME | No | | Written / last edited |
+
+Index `(product_id, is_visible, created_at)` serves the product page and the averages on product cards.

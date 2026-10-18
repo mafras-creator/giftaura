@@ -29,7 +29,7 @@ $isBankUnpaid = ($payment['method'] ?? '') === 'bank_transfer' && ($payment['sta
                     <tbody>
                     <?php foreach ($items as $item): ?>
                         <tr>
-                            <td><?php if ($item['product_id'] !== null): ?><a href="<?= e(url('admin/product-edit.php', ['id' => $item['product_id']])) ?>"><?= e($item['product_name']) ?></a><?php else: ?><?= e($item['product_name']) ?><?php endif; ?></td>
+                            <td><?php if ($item['product_id'] !== null): ?><a href="<?= e(url('admin/product-edit.php', ['id' => $item['product_id']])) ?>"><?= e($item['product_name']) ?></a><?php else: ?><?= e($item['product_name']) ?><?php endif; ?><?= View::partial('custom-note', ['text' => (string) ($item['customization_text'] ?? '')]) ?></td>
                             <td><?= e($item['product_sku'] ?? '—') ?></td>
                             <td class="num"><?= e(money($item['unit_price'])) ?></td>
                             <td class="num"><?= e((string) $item['quantity']) ?></td>

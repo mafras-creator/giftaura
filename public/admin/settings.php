@@ -1,11 +1,24 @@
 <?php
-/** GiftAura - admin: store settings (contact details, delivery charges, payment methods, bank details). */
+/** GiftAura - admin: store settings (logo, contact details, delivery charges, payment methods, bank details). */
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/app/bootstrap.php';
 
 $admin = Auth::requireAdmin();
 $errors = [];
 $submitted = [];
+
+if (is_post() && in_array(post_string('action'), ['logo_upload', 'logo_reset'], true)) {
+    Csrf::verify();
+    if (post_string('action') === 'logo_reset') {
+        BrandService::reset($admin['id']);
+        Flash::add('success', 'The default GiftAura logo is back.');
+    } else {
+        $file = isset($_FILES['logo']) && is_array($_FILES['logo']) && !is_array($_FILES['logo']['name'] ?? null) ? $_FILES['logo'] : ['error' => UPLOAD_ERR_NO_FILE];
+        $error = BrandService::upload($file, $admin['id']);
+        Flash::add($error === null ? 'success' : 'error', $error ?? 'New logo saved. Press Ctrl + F5 in the shop to see it.');
+    }
+    redirect('admin/settings.php');
+}
 
 if (is_post()) {
     Csrf::verify();
