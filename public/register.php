@@ -35,9 +35,11 @@ if (is_post()) {
         EmailService::sendVerification($result['id']);
         Flash::add('success', 'Your account has been created. We sent a verification link to '
             . mb_strtolower(trim((string) $input['email'])) . ' — please open it before placing an order.');
+        $back = CartService::takeReturn();
         if ($waiting !== null) {
             Flash::add('success', '"' . $waiting . '" has been added to your cart.');
-            redirect('cart.php');
+            header('Location: ' . $back, true, 303); // back to the page they were on
+            exit;
         }
         redirect('account/');
     }

@@ -28,9 +28,12 @@ if (is_post()) {
             $waiting = CartService::takeWaiting();
             CartService::mergeSessionCart($user['id']);
             Flash::add('success', 'Welcome back, ' . $user['full_name'] . '.');
+            $back = CartService::takeReturn();
             if ($waiting !== null && $user['role'] === 'customer') {
                 Flash::add('success', '"' . $waiting . '" has been added to your cart.');
-                $next = url('cart.php');
+                if ($next === '') {
+                    $next = $back; // back to the page they were on, not to the cart
+                }
             }
             $wished = WishlistService::addPending($user);
             if ($wished !== null) {

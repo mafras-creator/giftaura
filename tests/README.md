@@ -18,7 +18,7 @@ Nothing touches the real `giftaura_db` database.
 | `custom_e2e.sh` | 48 checks: personalised products (admin settings, Personalise button, message box, cart edit, guest-to-login hand-over, checkout fingerprint, order snapshot, e-mail, required/optional, switching off) |
 | `review_e2e.sh` | 52 checks: reviews only after delivery, validation, escaping, public name, averages and star bars, card rating, edit/delete, other customers and admins refused, admin hide/show/delete, paging |
 | `staff_e2e.sh` | 96 checks: staff accounts (generated password, username login, forced change, permissions, 403 pages, reset, deactivate), contact form (validation, spam trap, rate limit), My inquiries, admin reply and e-mail, status |
-| `shop_sales_e2e.sh` | 75 checks: login before add to cart (product kept after login/registration), profile card, in-shop sales (access, validation, invoice, stock, ledger, reports, cancel, staff area) |
+| `shop_sales_e2e.sh` | 76 checks: login before add to cart (product kept after login/registration, back to the same page), profile card, in-shop sales (access, validation, invoice, stock, ledger, reports, cancel, staff area) |
 | `email_unit.php` | 17 checks: header-injection guards and one-time link rules (in-memory database) |
 | `fake_smtp.php` | Tiny local SMTP server used by `email_e2e.sh` (accepts or rejects the login). Test only |
 | `make_fixtures.php` | Creates the image files used by the upload-security checks in `admin_e2e.sh` |

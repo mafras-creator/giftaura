@@ -12,12 +12,13 @@ pass=0; fail=0
 check(){ if [ "$2" == "$3" ]; then pass=$((pass+1)); echo "  ok   $1"; else fail=$((fail+1)); echo "  FAIL $1: expected [$3] got [$2]"; fi; }
 rm -f *.jar
 A=admin.jar; C=nimal.jar; G=guest.jar; G2=guest2.jar; G3=guest3.jar; S=staff.jar
-LOGIN_NEXT="$B/login.php?next=%2Fgiftaura%2Fcart.php"
+PP=/giftaura/product.php?slug=sample-red-rose-bouquet
+LOGIN_NEXT="$B/login.php?next=%2Fgiftaura%2Fproduct.php%3Fslug%3Dsample-red-rose-bouquet"
 TOKPAGE=login.php post $A login.php -d email=admin@example.com -d password=admin123 >/dev/null
 
 echo "== Guest adds to cart -> asked to log in, product kept"
-R=$(TOKPAGE='product.php?slug=sample-red-rose-bouquet' post $G cart.php -d action=add -d product_id=1 -d quantity=2)
-check "guest Add to cart -> login page (next = cart)" "$R" "303 $LOGIN_NEXT"
+R=$(TOKPAGE='product.php?slug=sample-red-rose-bouquet' post $G cart.php -d action=add -d product_id=1 -d quantity=2 -d return=$PP)
+check "guest Add to cart -> login page (next = the product page)" "$R" "303 $LOGIN_NEXT"
 LP=$(page $G 'login.php?next=%2Fgiftaura%2Fcart.php')
 check "login page: Almost there with the product name" "$(echo "$LP" | grep -c 'Almost there')|$(echo "$LP" | grep -c '<strong>Sample Red Rose Bouquet</strong> will be added to your cart')" "1|1"
 check "login page offers Create an account" "$(echo "$LP" | grep -c 'New customer? Create an account')" "1"
@@ -27,19 +28,20 @@ check "nothing waiting -> no Almost there box" "$(page $G2 login.php | grep -c '
 TOKPAGE=register.php post $C register.php -d full_name='Nimal Perera' -d email=nimal@example.com -d phone=0771234567 -d password=secret123 -d password_confirm=secret123 >/dev/null
 sql "UPDATE users SET email_verified_at=datetime('now') WHERE email='nimal@example.com'"
 rm -f $C
-R=$(TOKPAGE=login.php post $G login.php -d email=nimal@example.com -d password=secret123 -d next=/giftaura/cart.php)
-check "login -> straight to the cart" "$R" "303 $B/cart.php"
-CP=$(page $G cart.php)
-check "cart has the product, qty 2, success message" "$(q "SELECT product_id||'x'||quantity FROM cart_items")|$(echo "$CP" | grep -c '&quot;Sample Red Rose Bouquet&quot; has been added to your cart')" "1x2|1"
+R=$(TOKPAGE=login.php post $G login.php -d email=nimal@example.com -d password=secret123 -d next=$PP)
+check "login -> back to the same product page (not the cart)" "$R" "303 $B/product.php?slug=sample-red-rose-bouquet"
+CP=$(page $G 'product.php?slug=sample-red-rose-bouquet')
+check "cart has the product, qty 2; product page shows added message and badge 2" "$(q "SELECT product_id||'x'||quantity FROM cart_items")|$(echo "$CP" | grep -c '&quot;Sample Red Rose Bouquet&quot; has been added to your cart')|$(echo "$CP" | grep -o 'cart-link__count\">[0-9]*' | grep -o '[0-9]*$')" "1x2|1|2"
+check "unsafe return address ignored -> products page" "$(TOKPAGE=products.php post $G2 cart.php -d action=add -d product_id=5 -d quantity=1 -d return=https://evil.example/x | cut -d' ' -f2)" "$B/login.php?next=%2Fgiftaura%2Fproducts.php"
 check "waiting product forgotten after login" "$(page $G 'login.php' >/dev/null; curl -s -b $G -o /dev/null -w '%{http_code}' $B/login.php)" "303"
 R=$(TOKPAGE='product.php?slug=sample-teddy-bear' post $G cart.php -d action=add -d product_id=9 -d quantity=1)
 check "logged-in customer: Add to cart -> cart, not login" "$R" "303 $B/cart.php"
 check "second product saved directly" "$(q "SELECT COUNT(*) FROM cart_items")" "2"
 # new customer: personalised product, then Create account
 sql "UPDATE products SET is_customizable=1, custom_label='Name on the card', custom_max_length=30, custom_required=1 WHERE id=8"
-TOKPAGE='product.php?slug=sample-chocolate-gift-box' post $G3 cart.php -d action=add -d product_id=8 -d quantity=1 --data-urlencode 'customization_text=Happy birthday Amma' >/dev/null
+TOKPAGE='product.php?slug=sample-chocolate-gift-box' post $G3 cart.php -d action=add -d product_id=8 -d quantity=1 -d return=/giftaura/products.php?q=chocolate --data-urlencode 'customization_text=Happy birthday Amma' >/dev/null
 R=$(TOKPAGE=register.php post $G3 register.php -d full_name='Kumari Silva' -d email=kumari@example.com -d phone=0712223333 -d password=secret123 -d password_confirm=secret123)
-check "Create account -> straight to the cart" "$R" "303 $B/cart.php"
+check "Create account -> back to the page they were on" "$R" "303 $B/products.php?q=chocolate"
 KID=$(q "SELECT id FROM users WHERE email='kumari@example.com'")
 check "new account's cart has the product and the message" "$(q "SELECT ci.product_id||'|'||ci.customization_text FROM cart_items ci JOIN carts c ON c.id=ci.cart_id WHERE c.user_id=$KID")" "8|Happy birthday Amma"
 check "cart page shows the product and its message" "$(page $G3 cart.php | grep -c 'Sample Chocolate Gift Box' | awk '{print ($1>0)}')|$(page $G3 cart.php | grep -c 'Happy birthday Amma' | awk '{print ($1>0)}')" "1|1"

@@ -4,7 +4,8 @@
  * GET  : show the cart with live prices and stock checks.
  * POST : action=add|update|message|remove (CSRF protected), then redirect back.
  * A guest who adds a product is sent to log in / create an account; the product
- * waits in the session and is added to their saved cart automatically afterwards.
+ * waits in the session, is added to their saved cart automatically afterwards and
+ * the customer returns to the page they were on (with an "added to your cart" message).
  */
 declare(strict_types=1);
 require dirname(__DIR__) . '/app/bootstrap.php';
@@ -39,7 +40,10 @@ if (is_post()) {
                 // the session and moved into their saved cart right after login/registration.
                 $name = Database::fetchValue('SELECT name FROM products WHERE id = :id', ['id' => $productId]);
                 $_SESSION['cart_waiting'] = is_string($name) ? $name : 'Your product';
-                redirect('login.php', ['next' => url('cart.php')]);
+                // After login/registration the customer comes back to the page they were on.
+                $back = safe_next(post_string('return'), 'products.php');
+                $_SESSION['cart_return'] = $back;
+                redirect('login.php', ['next' => $back]);
             }
             redirect('cart.php');
 

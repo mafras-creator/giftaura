@@ -410,6 +410,14 @@ final class CartService
         return is_string($name) ? $name : null;
     }
 
+    /** Page the guest was on when they pressed Add to cart (safe local path), and forget it. */
+    public static function takeReturn(): string
+    {
+        $back = $_SESSION['cart_return'] ?? '';
+        unset($_SESSION['cart_return']);
+        return safe_next(is_string($back) ? $back : '', 'cart.php');
+    }
+
     /** Name of the waiting product without forgetting it (login / register pages). */
     public static function waiting(): ?string
     {
