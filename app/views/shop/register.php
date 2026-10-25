@@ -1,10 +1,17 @@
 <?php
-/** Registration form. Variables: $errors (array), $old (array). */
+/** Registration form. Variables: $errors (array), $old (array), $waiting (product name|null). */
 ?>
 <section class="auth">
     <div class="auth__card auth__card--wide">
         <h1 class="auth__title">Create your account</h1>
         <p class="auth__lead">Save your details, check out faster and track your orders.</p>
+
+        <?php if (!empty($waiting)): ?>
+            <div class="cart-waiting" role="status">
+                <p class="cart-waiting__title">Almost there!</p>
+                <p> Create your account and <strong><?= e($waiting) ?></strong> will be in your cart straight away. Already registered? <a href="<?= e(url('login.php')) ?>">Log in</a></p>
+            </div>
+        <?php endif; ?>
 
         <?php if (!empty($errors)): ?>
             <div class="alert alert--error" role="alert"><span>Please correct the highlighted fields.</span></div>

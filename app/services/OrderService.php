@@ -335,7 +335,7 @@ final class OrderService
     public static function history(int $orderId): array
     {
         return Database::fetchAll(
-            'SELECT h.from_status, h.to_status, h.note, h.created_at, u.role AS changed_by_role
+            'SELECT h.from_status, h.to_status, h.note, h.created_at, u.role AS changed_by_role, u.full_name AS changed_by_name
                FROM order_status_history h LEFT JOIN users u ON u.id = h.changed_by
               WHERE h.order_id = :id ORDER BY h.created_at ASC, h.id ASC',
             ['id' => $orderId]

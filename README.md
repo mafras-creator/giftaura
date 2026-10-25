@@ -26,6 +26,8 @@ An online shop for the GiftAura gift store: flower bouquets, beauty creams and g
 | Sale prices (old price crossed out, -% badge, On sale page) and wishlist (heart on every product picture) | Normal + sale price per product |
 | Personalised products: "Personalisable" badge, Personalise button and message box; message kept in cart, order, e-mails and admin order page | Personalisation box in the product form (question, length, required) |
 | Product reviews: only after delivery, from My account → My reviews; stars and average on product cards; review section under each product | Admin → Reviews: filter, hide/show, delete |
+| Add to cart asks guests to log in or register, then adds the product automatically; profile card with icon menu | **In-shop sales**: sell to walk-in customers, printable invoice (INV-…), stock reduced automatically, cancel invoice |
+| Contact form with reference number; My account → My inquiries with the store's replies | Inquiries: reply by e-mail, status; **Staff accounts** with generated passwords and per-area permissions |
 | Profile, password and address book | Reports for any date range with CSV export; activity log; store settings |
 
 ---
@@ -162,7 +164,7 @@ git log --oneline
 If GiftAura was installed **before 17 Oct 2026**:
 1. Take a backup (`scripts\backup.bat`).
 2. Copy the new files over the project folder (your `config/config.php` and uploaded photos are kept).
-3. phpMyAdmin → click **giftaura_db** → **SQL** tab → paste the contents of `sql/updates/2026-10-17_email.sql` → **Go**. Then do the same with `sql/updates/2026-10-17_banners.sql`, `sql/updates/2026-10-17_sale_wishlist.sql` `sql/updates/2026-10-18_customization.sql` and `sql/updates/2026-10-18_reviews.sql` (one block at a time; expected result: **20** tables). Log in to phpMyAdmin as `root` (the default) — `giftaura_app` is not allowed to change tables. Existing accounts are marked as verified.
+3. phpMyAdmin → click **giftaura_db** → **SQL** tab → paste the contents of `sql/updates/2026-10-17_email.sql` → **Go**. Then do the same with `sql/updates/2026-10-17_banners.sql`, `sql/updates/2026-10-17_sale_wishlist.sql` `sql/updates/2026-10-18_customization.sql`, `sql/updates/2026-10-18_reviews.sql` and `sql/updates/2026-10-20_staff_inquiries.sql` and `sql/updates/2026-10-24_shop_sales.sql` (one block at a time; expected result: **24** tables). Log in to phpMyAdmin as `root` (the default) — `giftaura_app` is not allowed to change tables. Existing accounts are marked as verified.
 4. Add the e-mail settings: `C:\xampp\php\php.exe scripts\setup_mail.php` → **1** (test mode) for now. This also adds `site_url` to your config.
 5. `C:\xampp\php\php.exe scripts\system_check.php` → all checks should pass.
 6. Commit: `git add -A` then `git commit -m "E-mail verification, password reset and order e-mails"`.

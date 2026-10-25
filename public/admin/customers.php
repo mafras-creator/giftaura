@@ -3,7 +3,7 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/app/bootstrap.php';
 
-Auth::requireAdmin();
+Auth::requireAdmin('customers');
 
 $filters = array_filter([
     'q'      => mb_substr(query_string('q'), 0, 100),

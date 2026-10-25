@@ -235,7 +235,7 @@ erDiagram
 
 | # | Table | Purpose | Key constraints |
 |---|---|---|---|
-| 1 | `users` | Customers and administrators | `email` unique; role enum |
+| 1 | `users` | Customers, staff and the main administrator | `email` and `username` unique; role enum customer / staff / admin; e-mail or username required |
 | 2 | `login_attempts` | Login rate limiting | indexed by email+time and IP+time |
 | 3 | `customer_addresses` | Saved delivery addresses | FK user (cascade delete) |
 | 4 | `categories` | Categories and subcategories | self FK `parent_id`; `slug` unique and URL-safe |
@@ -341,3 +341,75 @@ Added by `sql/updates/2026-10-18_reviews.sql`; the database now has **20 tables*
 | created_at, updated_at | DATETIME | No | | Written / last edited |
 
 Index `(product_id, is_visible, created_at)` serves the product page and the averages on product cards.
+
+
+## Staff administrators and customer inquiries (20 Oct 2026)
+
+Added by `sql/updates/2026-10-20_staff_inquiries.sql`; the database now has **22 tables**.
+
+New columns in `users`:
+
+| Column | Type | Meaning |
+|---|---|---|
+| role | ENUM('customer','staff','admin') | `admin` = main (super) administrator, `staff` = staff administrator |
+| email | VARCHAR(190) **NULL** | Now optional, because staff can log in with a username only |
+| username | VARCHAR(40) NULL, UNIQUE | Staff login name (lower-case letters, numbers, `. _ -`) |
+| permissions | VARCHAR(255) NULL | Areas the staff member may open, e.g. `products,categories,inquiries` (checked again in PHP against a fixed list) |
+| must_change_password | TINYINT(1) | 1 = must choose a new password at the next login (new account, password reset) |
+| created_by | INT UNSIGNED NULL | FK → users (SET NULL): who created the staff account |
+
+### Table 21: customer_inquiries
+
+| Column | Type | Null | Key | Meaning |
+|---|---|---|---|---|
+| id | INT UNSIGNED | No | PK | Shown as reference INQ-0001 |
+| user_id | INT UNSIGNED | Yes | FK → users (SET NULL) | Customer account if the sender was logged in |
+| name, email, phone | VARCHAR | phone yes | | Sender details |
+| subject | ENUM(order, product, personalisation, delivery, other) | No | | What it is about |
+| order_number | VARCHAR(20) | Yes | | Order reference typed by the customer (format checked) |
+| message | VARCHAR(2000) | No | | Message (cleaned, always escaped when shown) |
+| status | ENUM(new, in_progress, resolved) | No | index | Work status |
+| ip_address | VARCHAR(45) | Yes | index | Used for the 5-per-hour limit |
+| last_reply_at, created_at, updated_at | DATETIME | | | Times |
+
+### Table 22: inquiry_replies
+
+| Column | Type | Null | Key | Meaning |
+|---|---|---|---|---|
+| id | INT UNSIGNED | No | PK | |
+| inquiry_id | INT UNSIGNED | No | FK → customer_inquiries (CASCADE) | Message answered |
+| admin_id | INT UNSIGNED | Yes | FK → users (SET NULL) | Who replied (kept even if the staff account is removed) |
+| message | VARCHAR(3000) | No | | Reply text (also e-mailed) |
+| created_at | DATETIME | No | | When |
+
+
+## In-shop sales and invoices (24 Oct 2026)
+
+Added by `sql/updates/2026-10-24_shop_sales.sql`; the database now has **24 tables**. `inventory_movements` gets the column `shop_sale_id` and two new reasons: `shop_sale` and `shop_sale_voided`.
+
+### Table 23: shop_sales
+
+| Column | Type | Null | Key | Meaning |
+|---|---|---|---|---|
+| id | INT UNSIGNED | No | PK | |
+| invoice_number | VARCHAR(20) | No | UQ | INV-YYMMDD-0001 (date + sale number) |
+| customer_name, customer_phone | VARCHAR | Yes | | Optional walk-in customer details |
+| subtotal, discount, total | DECIMAL(10,2) | No | CHECK total = subtotal − discount | Amounts (prices read from `products`) |
+| payment_method | ENUM(cash, card, bank_transfer) | No | | How the customer paid |
+| amount_received | DECIMAL(10,2) | Yes | | Cash handed over (for the change) |
+| note | VARCHAR(255) | Yes | | Printed on the invoice |
+| status | ENUM(completed, voided) | No | index | Voided = cancelled, stock returned |
+| void_reason, voided_at, voided_by | | Yes | FK voided_by → users (SET NULL) | Who cancelled it and why |
+| created_by | INT UNSIGNED | Yes | FK → users (SET NULL) | Administrator or staff member who sold |
+| created_at | DATETIME | No | | Date and time of the sale |
+
+### Table 24: shop_sale_items
+
+| Column | Type | Null | Key | Meaning |
+|---|---|---|---|---|
+| id | INT UNSIGNED | No | PK | |
+| sale_id | INT UNSIGNED | No | FK → shop_sales (CASCADE); UQ with product_id | Invoice |
+| product_id | INT UNSIGNED | Yes | FK → products (SET NULL) | Product sold |
+| product_name, sku, unit_price | | | | Snapshot printed on the invoice |
+| quantity | SMALLINT UNSIGNED | No | CHECK 1–999 | |
+| line_total | DECIMAL(10,2) | No | CHECK = unit_price × quantity | |

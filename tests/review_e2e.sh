@@ -31,7 +31,7 @@ check "review form refused (404)" "$(code $C 'account/review.php?product=1')" "4
 check "My reviews: nothing to review" "$(page $C account/reviews.php | grep -c 'Nothing to review yet')" "1"
 check "order page has no review link" "$(page $C "account/order.php?order=$N1" | grep -c 'Write a review')" "0"
 check "product page: no reviews yet" "$(page $G 'product.php?slug=sample-red-rose-bouquet' | grep -c 'No reviews yet')" "1"
-check "account menu has My reviews" "$(page $C account/ | grep -c 'account/reviews.php">My reviews')" "1"
+check "account menu has My reviews" "$(page $C account/ | grep -A2 'href="/giftaura/account/reviews.php"' | grep -c '<span>My reviews</span>')" "1"
 
 echo "== After delivery"
 deliver $O1

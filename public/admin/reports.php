@@ -3,13 +3,14 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/app/bootstrap.php';
 
-Auth::requireAdmin();
+Auth::requireAdmin('reports');
 
 $report = array_key_exists(query_string('report'), ReportService::REPORTS) ? query_string('report') : 'sales';
 [$from, $to, $notice] = ReportService::range(query_string('from'), query_string('to'));
 
 $data = match ($report) {
-    'sales'     => ['summary' => ReportService::summary($from, $to), 'days' => ReportService::salesByDay($from, $to)],
+    'sales'     => ['summary' => ReportService::summary($from, $to), 'days' => ReportService::salesByDay($from, $to),
+                    'shop' => ShopSaleService::totals($from, $to)],
     'orders'    => ['rows' => ReportService::orders($from, $to)],
     'status'    => ['rows' => ReportService::statusTotals($from, $to)],
     'products'  => ['rows' => ReportService::bestSellers($from, $to)],

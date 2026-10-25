@@ -122,7 +122,7 @@ final class UserService
             return ['new_password' => 'Choose a password different from your current one.'];
         }
 
-        Database::execute('UPDATE users SET password_hash = :h WHERE id = :id', [
+        Database::execute('UPDATE users SET password_hash = :h, must_change_password = 0 WHERE id = :id', [
             'h' => password_hash($v->value('new_password'), PASSWORD_DEFAULT), 'id' => $userId,
         ]);
         // New session id so any stolen copy of the old session stops working.

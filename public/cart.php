@@ -3,6 +3,8 @@
  * GiftAura - shopping cart.
  * GET  : show the cart with live prices and stock checks.
  * POST : action=add|update|message|remove (CSRF protected), then redirect back.
+ * A guest who adds a product is sent to log in / create an account; the product
+ * waits in the session and is added to their saved cart automatically afterwards.
  */
 declare(strict_types=1);
 require dirname(__DIR__) . '/app/bootstrap.php';
@@ -17,7 +19,13 @@ if (is_post()) {
         case 'add':
             $customText = mb_substr(post_string('customization_text'), 0, 2000);
             $result = CartService::add($productId, $quantity, $customText);
-            Flash::add($result['ok'] ? 'success' : 'error', $result['message']);
+            if (!$result['ok'] || current_user() !== null) {
+                Flash::add($result['ok'] ? 'success' : 'error', $result['message']);
+            } elseif (($pos = strpos($result['message'], 'was added to your cart.')) !== false
+                && ($note = trim(substr($result['message'], $pos + 23))) !== '') {
+                // Guest: the "added" message comes after login; keep notes such as "quantity was limited".
+                Flash::add('warning', $note);
+            }
             // If adding failed, go back to the page the customer came from so they see why.
             $back = post_string('return');
             if (!$result['ok'] && $back !== '') {
@@ -25,6 +33,13 @@ if (is_post()) {
                 $_SESSION['custom_old'] = ['product_id' => $productId, 'text' => $customText];
                 header('Location: ' . safe_next($back, 'cart.php'), true, 303);
                 exit;
+            }
+            if ($result['ok'] && current_user() === null) {
+                // Guests must log in or create an account first. The product is kept in
+                // the session and moved into their saved cart right after login/registration.
+                $name = Database::fetchValue('SELECT name FROM products WHERE id = :id', ['id' => $productId]);
+                $_SESSION['cart_waiting'] = is_string($name) ? $name : 'Your product';
+                redirect('login.php', ['next' => url('cart.php')]);
             }
             redirect('cart.php');
 

@@ -154,6 +154,30 @@ Last run: 18 Oct 2026 — **52 passed, 0 failed**. Same day, all suites on one f
 | TR-05 | Administrator | customer 403; list, real customer name, rating filter; hide → gone from product page and average recalculated; customer sees "Hidden by the store"; customer edit keeps it hidden; show; activity log; delete; unknown action 400 | Pass |
 | TR-06 | Delete and paging | own review deleted and can be written again; 7 reviews → 5 per page, Older reviews, out-of-range page clamped | Pass |
 
+### 5.10 Staff administrators and customer inquiries — `tests/staff_e2e.sh` (96 checks)
+Last run: 20 Oct 2026 — **96 passed, 0 failed**. Same day, all suites on one fresh copy: unit 17/17, shop 58/58, admin 107/107, e-mail 69/69, banner 91/91, sale/wishlist 36/36, personalisation 48/48, reviews 52/52; no errors in the logs. Screenshots checked.
+
+| ID | Area | Example checks | Result |
+|---|---|---|---|
+| TA-01 | Create staff | Staff accounts page for the main administrator only; CSRF; bad username, no area and duplicate username refused; unknown area removed; 12-character password with upper/lower/digit shown once; stored only as a hash and not in any log; activity log | Pass |
+| TA-02 | First login | username login (any letter case); wrong password refused; forced to Change password before any page; weak or same password refused; then dashboard | Pass |
+| TA-03 | Permissions | menu and dashboard show only the ticked areas; 5 allowed pages 200; 13 other pages (orders, customers, reports, CSV, reviews, banners, about, settings, e-mail log, activity log, staff, order, customer) 403; staff cannot create staff by a direct POST; staff adds a category; staff cannot check out | Pass |
+| TA-04 | Manage staff | change areas takes effect at once; super admin cannot be edited as staff (404); new password forces a change and old password stops working; deactivate logs the person out and blocks login; activate; activity log; customers cannot log in with a username or open admin pages | Pass |
+| TI-01 | Contact form | form and hidden trap field; logged-in details and `?order=` filled in; CSRF; 5 validation errors and typed values kept; spam trap looks sent but saves nothing; guest and customer messages saved (lower-case e-mail, upper-case order); reference INQ-0001 shown; 6th message in an hour refused | Pass |
+| TI-02 | Answering | My inquiries shows only own messages; dashboard card and menu badge; list escaped, subject filter, search; unknown id 404; no order/customer links without those areas; empty reply refused; reply saved with the staff member, status, e-mail log and e-mail (reference, escaped, link to My inquiries or Contact for guests); customer sees the reply; status change without reply; unknown status ignored; activity log | Pass |
+
+### 5.11 In-shop sales, login before cart, profile — `tests/shop_sales_e2e.sh` (75 checks)
+Last run: 24 Oct 2026 — **75 passed, 0 failed**. Same day, all suites on one fresh copy: unit 17/17, shop 58/58, admin 107/107, e-mail 69/69, banner 91/91, sale/wishlist 36/36, personalisation 48/48, reviews 52/52, staff 96/96; no errors in the logs. Screenshots (desktop, phone, print) checked.
+
+| ID | Area | Example checks | Result |
+|---|---|---|---|
+| TP-01 | Login before cart | guest Add to cart → login page with "Almost there" and the product name; Create account link; register page shows it too; out-of-stock or missing required message → not sent to login; after login → cart with the product (qty 2) and message; after registration → cart with the product and its personalisation; verification e-mail still sent; logged-in customers go straight to the cart | Pass |
+| TP-02 | Profile | avatar initial, large name, Verified / not verified, e-mail, mobile, location from the address (or Sri Lanka); Edit opens the form, Cancel; errors keep the form open; saved name shown; 7-item icon menu on all account pages | Pass |
+| TS-01 | Access | customer 403; admin list/new/menu; staff with the area can sell, without it 403 on all three pages; CSRF | Pass |
+| TS-02 | Validation | no product, quantity 0, line without product, more than stock (also when the same product is on two lines), discount > subtotal, bad discount/phone/method, cash less than total; typed values kept; nothing saved and stock unchanged | Pass |
+| TS-03 | Sale | invoice INV-YYMMDD-0001, prices from the database (a price sent by the browser is ignored), discount and change, items snapshot, stock reduced, ledger rows linked to the invoice, invoice page (shop name, phone when set, customer, totals, Print, note), product hidden online can be sold, list/search/date filter, dashboard, reports, inventory link, website shows out of stock, activity log | Pass |
+| TS-04 | Cancel invoice | reason required; stock returned; ledger rows; Cancelled stamp; second cancel refused; cancelled invoices not counted; unknown action 400 | Pass |
+
 ## 6. Manual acceptance tests (laptop, Chrome)
 
 Record the actual result and Pass/Fail for each test.
@@ -213,10 +237,15 @@ Record the actual result and Pass/Fail for each test.
 | M-41 | FR-63 | Logged out: press a heart → log in → open **Wishlist** | Product is in the wishlist; heart is filled red; pressing again removes it | | Pending |
 | M-42 | FR-67 | Run `sql/updates/2026-10-18_customization.sql`. Admin → Products → Edit → tick **Customers can personalise this product**, question "Name to print", 30 characters → Save. In the shop press **Personalise**, type a name with two lines → Add to cart → change it in the cart → place the order | Card shows Personalisable; message counter works; cart, confirmation, My order, admin order page and order e-mail show the message exactly as typed | | Pending |
 | M-43 | FR-68 | Run `sql/updates/2026-10-18_reviews.sql`. Place an order as a customer → admin moves it to **Delivered** → customer opens **My account → My reviews** → **Write a review** (choose stars, type a comment) → open the product page. Then Admin → **Reviews** → **Hide** it | Review shows under the product with the average; card shows the stars; after Hide it disappears from the shop and the customer sees "Hidden by the store" | | Pending |
+| M-44 | FR-69 | Run `sql/updates/2026-10-20_staff_inquiries.sql`. Admin → **Staff accounts** → add a staff member (name, username, tick Products, Categories, Inquiries) → copy the password. In another browser (or private window) log in with the username and that password → choose a new password | Staff sees only Dashboard, Inquiries, Products, Inventory, Categories; opening `admin/orders.php` shows Access denied; the Staff accounts list shows "Active" and the last login | | Pending |
+| M-45 | FR-70 | Log out → Contact → send a message → as staff: Admin → **Inquiries** → open it → write a reply → **Resolved** → Send reply | Message appears with reference INQ-…; the reply arrives by e-mail (Gmail mode) or in `storage/mail` (test mode); a customer who was logged in sees it under My account → My inquiries | | Pending |
+| M-46 | FR-71 | Run `sql/updates/2026-10-24_shop_sales.sql`. Note the stock of a product. Admin → **In-shop sales → New in-shop sale** → choose it, quantity 2, Cash, cash received 10000 → Save → **Print invoice**. Then **Cancel invoice** with a reason | Invoice with GiftAura, INV-…, date, items, total and change; stock went down by 2, Inventory shows "Sold in the shop" with the invoice; after cancelling the stock is back and the invoice shows Cancelled | | Pending |
+| M-47 | FR-72 | Log out. Open a product → **Add to cart** → log in (or Create account) | Login page says "Almost there!" with the product name; after login you are on the cart page and the product is in it | | Pending |
+| M-48 | FR-73 | Log in as a customer → **My account** → Edit → change the name → Save | Profile card with the round letter, name, e-mail, mobile and location; the new name appears | | Pending |
 
 ### 6.1 Summary of manual tests
 **25 of 25 manual acceptance tests passed** on the development laptop (16–17 Oct 2026). No open defects.
-E-mail extension, design refresh, personalisation and reviews: M-26 – M-43 are **pending** until run on the laptop.
+E-mail extension, design refresh, personalisation, reviews, staff, inquiries, in-shop sales, cart login and profile: M-26 – M-48 are **pending** until run on the laptop.
 
 ## 7. Requirements traceability (summary)
 
@@ -232,6 +261,11 @@ E-mail extension, design refresh, personalisation and reviews: M-26 – M-43 are
 | FR-62 – FR-63 (sale prices, wishlist) | TS-01 – TS-04, M-40 – M-41 |
 | FR-67 (personalised products) | TC-01 – TC-06, M-42 |
 | FR-68 (product reviews) | TR-01 – TR-06, M-43 |
+| FR-69 (staff administrators) | TA-01 – TA-04, M-44 |
+| FR-70 (customer inquiries) | TI-01 – TI-02, M-45 |
+| FR-71 (in-shop sales and invoices) | TS-01 – TS-04, M-46 |
+| FR-72 (login before adding to cart) | TP-01, M-47 |
+| FR-73 (profile page) | TP-02, M-48 |
 | NFR-01 – NFR-11 (security) | security checklist IDs, admin_e2e access control, system_check DB/WEB |
 | NFR-12 – NFR-14 (integrity) | T5-07 – T5-15, DB-05 – DB-11 |
 | NFR-15 – NFR-17 (usability) | M-22, M-23, laptop screenshots |

@@ -1,5 +1,5 @@
 <?php
-/** Admin dashboard. Variables: $user, $summary, $lowStock, $recent. */
+/** Admin dashboard. Variables: $user, $summary, $lowStock, $recent, $newInquiries, $shopToday. Staff see only their own areas. */
 $cards = [
     ['Sales today',       money($summary['sales_today']),  $summary['orders_today'] . ' order(s) placed today', '', 'admin/reports.php', ['report' => 'sales', 'from' => date('Y-m-d'), 'to' => date('Y-m-d')]],
     ['Sales this month',  money($summary['sales_month']),  $summary['orders_month'] . ' order(s) · collected ' . money($summary['collected_month']), '', 'admin/reports.php', ['report' => 'sales']],
@@ -9,13 +9,20 @@ $cards = [
     ['Customers',         number_format($summary['customers']), 'Active customer accounts', '', 'admin/customers.php', []],
     ['Active products',   number_format($summary['active_products']), 'Inactive: ' . $summary['inactive_products'] . ' · Categories: ' . $summary['active_categories'], '', 'admin/products.php', []],
     ['Low / out of stock', $summary['low_stock'] . ' / ' . $summary['out_of_stock'], 'Active products needing stock', ($summary['low_stock'] + $summary['out_of_stock']) > 0 ? 'stat-card--danger' : '', 'admin/inventory.php', []],
+    ['Shop sales today',  money($shopToday['amount']), $shopToday['count'] . ' invoice(s) · New in-shop sale', '', 'admin/sales.php', []],
+    ['New inquiries',     number_format($newInquiries), 'Messages from the Contact page', $newInquiries > 0 ? 'stat-card--warning' : '', 'admin/inquiries.php', ['status' => 'new']],
 ];
+// Each card belongs to an admin area; staff members only see the areas they were given.
+$cardArea = ['Sales today' => 'reports', 'Sales this month' => 'reports', 'Pending orders' => 'orders', 'Orders in progress' => 'orders',
+    'Payments to verify' => 'orders', 'Customers' => 'customers', 'Active products' => 'products', 'Low / out of stock' => 'products',
+    'New inquiries' => 'inquiries', 'Shop sales today' => 'shop_sales'];
+$cards = array_values(array_filter($cards, static fn($c) => Auth::can($cardArea[$c[0]])));
 ?>
-<?php $failedEmails = EmailService::failedCount(); if ($failedEmails > 0): ?>
+<?php $failedEmails = Auth::isSuperAdmin() ? EmailService::failedCount() : 0; if ($failedEmails > 0): ?>
     <div class="alert alert--error"><span><?= e((string) $failedEmails) ?> e-mail(s) could not be sent in the last 7 days.
         <a href="<?= e(url('admin/emails.php', ['status' => 'failed'])) ?>">Open the e-mail log</a></span></div>
 <?php endif; ?>
-<p class="admin-lead">All figures are read live from the database. Sales exclude cancelled orders and refunded payments.</p>
+<?php if (Auth::can('reports')): ?><p class="admin-lead">All figures are read live from the database. Sales exclude cancelled orders and refunded payments.</p><?php endif; ?>
 
 <section class="stat-grid" aria-label="Store summary">
     <?php foreach ($cards as [$label, $value, $note, $modifier, $path, $query]): ?>
@@ -27,7 +34,13 @@ $cards = [
     <?php endforeach; ?>
 </section>
 
+<?php if ($user['role'] === 'staff'): ?>
+    <div class="alert alert--info"><span>Welcome, <?= e($user['full_name']) ?>. Your staff account can work in:
+        <?= e(implode(', ', array_map(static fn($p) => StaffService::PERMISSIONS[$p][0], $user['permission_list']))) ?>.</span></div>
+<?php endif; ?>
+
 <div class="admin-columns">
+    <?php if (Auth::can('orders')): ?>
     <section class="admin-panel">
         <header class="admin-panel__header">
             <h2 class="admin-panel__title">Latest orders</h2>
@@ -54,7 +67,9 @@ $cards = [
             </div>
         <?php endif; ?>
     </section>
+    <?php endif; ?>
 
+    <?php if (Auth::can('products')): ?>
     <section class="admin-panel">
         <header class="admin-panel__header">
             <h2 class="admin-panel__title">Low-stock alerts</h2>
@@ -80,4 +95,5 @@ $cards = [
             </div>
         <?php endif; ?>
     </section>
+    <?php endif; ?>
 </div>

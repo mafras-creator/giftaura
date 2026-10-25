@@ -78,8 +78,8 @@ try {
 }
 
 $tables = Database::query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
-check('DB-02', 'All 20 tables exist', count($tables) === 20, count($tables) . ' tables'
-    . (count($tables) < 20 ? ' - run the files in sql/updates/ in phpMyAdmin' : ''));
+check('DB-02', 'All 24 tables exist', count($tables) === 24, count($tables) . ' tables'
+    . (count($tables) < 22 ? ' - run the files in sql/updates/ in phpMyAdmin' : ''));
 
 $tz = (string) Database::fetchValue('SELECT @@session.time_zone');
 check('DB-03', 'Session time zone is Sri Lanka (+05:30)', $tz === '+05:30', $tz);
@@ -185,7 +185,9 @@ check('DB-12', 'No plain-text passwords stored', $plain === 0, $plain . ' suspic
 
 $missing = [];
 foreach (['products' => ['compare_at_price', 'is_customizable', 'custom_label', 'custom_max_length', 'custom_required'],
-          'cart_items' => ['customization_text'], 'order_items' => ['customization_text']] as $table => $columns) {
+          'users' => ['username', 'permissions', 'must_change_password', 'created_by'],
+          'cart_items' => ['customization_text'], 'order_items' => ['customization_text'],
+          'inventory_movements' => ['shop_sale_id']] as $table => $columns) {
     $have = array_column(Database::fetchAll('SHOW COLUMNS FROM ' . $table), 'Field');
     foreach ($columns as $column) {
         if (!in_array($column, $have, true)) {
@@ -193,8 +195,8 @@ foreach (['products' => ['compare_at_price', 'is_customizable', 'custom_label', 
         }
     }
 }
-check('DB-13', 'Sale-price and personalisation columns exist', $missing === [],
-    $missing === [] ? 'all present' : 'missing ' . implode(', ', $missing) . ' - run sql/updates/2026-10-18_customization.sql');
+check('DB-13', 'Sale-price, personalisation, staff and in-shop sale columns exist', $missing === [],
+    $missing === [] ? 'all present' : 'missing ' . implode(', ', $missing) . ' - run the files in sql/updates/');
 
 out('');
 // ---------------------------------------------------------------------

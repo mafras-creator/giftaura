@@ -271,10 +271,11 @@ final class ProductAdminService
         $pages = max(1, (int) ceil($total / $perPage));
         $page = min(max(1, $page), $pages);
         $items = Database::fetchAll(
-            "SELECT m.*, p.name AS product_name, p.sku, o.order_number, u.full_name AS user_name, u.role AS user_role
+            "SELECT m.*, p.name AS product_name, p.sku, o.order_number, ss.invoice_number, u.full_name AS user_name, u.role AS user_role
                FROM inventory_movements m
                JOIN products p ON p.id = m.product_id
                LEFT JOIN orders o ON o.id = m.order_id
+               LEFT JOIN shop_sales ss ON ss.id = m.shop_sale_id
                LEFT JOIN users u ON u.id = m.user_id
               WHERE {$where}
               ORDER BY m.created_at DESC, m.id DESC

@@ -6,7 +6,7 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/app/bootstrap.php';
 
-$admin = Auth::requireAdmin();
+$admin = Auth::requireAdmin('customers');
 $id = ctype_digit(query_string('id')) ? (int) query_string('id') : 0;
 $customer = CustomerAdminService::find($id);
 if ($customer === null) {

@@ -45,6 +45,8 @@ $quick = [
         <article class="stat-card"><h2 class="stat-card__label">Average order</h2><p class="stat-card__value"><?= e(money($s['average_order'])) ?></p><p class="stat-card__note">Gross sales ÷ orders counted</p></article>
         <article class="stat-card stat-card--warning"><h2 class="stat-card__label">Still pending</h2><p class="stat-card__value"><?= e(money($s['pending_value'])) ?></p><p class="stat-card__note">Included in gross sales</p></article>
         <article class="stat-card"><h2 class="stat-card__label">All orders placed</h2><p class="stat-card__value"><?= e((string) $s['orders_all']) ?></p><p class="stat-card__note">Including <?= e((string) $s['cancelled']) ?> cancelled</p></article>
+        <article class="stat-card"><h2 class="stat-card__label">In-shop sales</h2><p class="stat-card__value"><?= e(money($data['shop']['amount'])) ?></p><p class="stat-card__note"><?= e((string) $data['shop']['count']) ?> invoice(s), not counted above</p></article>
+        <article class="stat-card"><h2 class="stat-card__label">Website + shop</h2><p class="stat-card__value"><?= e(money(ShopSaleService::rupees((ShopSaleService::cents(number_format((float) $s['gross_sales'], 2, '.', '')) ?? 0) + (ShopSaleService::cents($data['shop']['amount']) ?? 0)))) ?></p><p class="stat-card__note">Gross online sales plus completed shop invoices</p></article>
     </section>
 
     <section class="admin-panel">

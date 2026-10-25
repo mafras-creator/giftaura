@@ -3,7 +3,7 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/app/bootstrap.php';
 
-Auth::requireAdmin();
+Auth::requireSuperAdmin();
 
 $types = ActivityLogService::entityTypes();
 $type = in_array(query_string('type'), $types, true) ? query_string('type') : '';

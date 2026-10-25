@@ -15,6 +15,9 @@ $formUrl = $isNew ? url('admin/product-edit.php') : url('admin/product-edit.php'
             <?php if (!$isNew && (int) $product['is_active'] === 1): ?>
                 <a class="btn btn--ghost btn--small" href="<?= e(url('product.php', ['slug' => $product['slug']])) ?>" target="_blank" rel="noopener">View in shop</a>
             <?php endif; ?>
+            <?php if (!$isNew && Auth::can('shop_sales') && (int) $product['stock_quantity'] > 0): ?>
+                <a class="btn btn--ghost btn--small" href="<?= e(url('admin/sale-new.php', ['product' => $product['id']])) ?>">Sell in the shop</a>
+            <?php endif; ?>
         </header>
         <?php if ($errors !== []): ?>
             <div class="alert alert--error panel-alert"><span>Please correct the highlighted fields.</span></div>

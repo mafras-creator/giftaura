@@ -6,9 +6,15 @@
  * re-loaded from the database, so a deactivated account or a changed
  * role takes effect immediately. Roles are never taken from the browser.
  *
+ * Roles: customer, staff (staff administrator) and admin (super administrator).
+ *
  * Page guards:
- *   Auth::requireLogin();   any logged-in user (customer or admin)
- *   Auth::requireAdmin();   administrators only (others get 403)
+ *   Auth::requireLogin();              any logged-in user
+ *   Auth::requireAdmin();              super administrator or any staff member
+ *   Auth::requireAdmin('products');    super administrator, or staff with that permission
+ *   Auth::requireSuperAdmin();         super administrator only
+ * Others get 403; guests go to the login page. A staff member who must change
+ * the generated password is sent to admin/password.php first.
  */
 declare(strict_types=1);
 
@@ -29,6 +35,7 @@ final class Auth
      */
     public static function attempt(string $email, string $password): string
     {
+        // $email is the e-mail address, or the username of a staff member.
         $email = mb_strtolower(trim($email));
         $ip = client_ip();
 
@@ -37,10 +44,9 @@ final class Auth
             return self::BLOCKED;
         }
 
-        $user = Database::fetchOne(
-            'SELECT id, password_hash, is_active FROM users WHERE email = :email',
-            ['email' => $email]
-        );
+        $user = str_contains($email, '@')
+            ? Database::fetchOne('SELECT id, password_hash, is_active FROM users WHERE email = :email', ['email' => $email])
+            : Database::fetchOne("SELECT id, password_hash, is_active FROM users WHERE username = :u AND role = 'staff'", ['u' => $email]);
 
         // Always run password_verify (against a dummy hash if the user does not
         // exist) so the response time does not reveal whether an email is registered.
@@ -97,7 +103,8 @@ final class Auth
             return null;
         }
         $user = Database::fetchOne(
-            'SELECT id, role, full_name, email, phone, email_verified_at, created_at, last_login_at
+            'SELECT id, role, full_name, email, username, phone, permissions, must_change_password,
+                    email_verified_at, created_at, last_login_at
                FROM users WHERE id = :id AND is_active = 1',
             ['id' => $id]
         );
@@ -107,6 +114,7 @@ final class Auth
             return null;
         }
         $user['id'] = (int) $user['id'];
+        $user['permission_list'] = $user['role'] === 'staff' ? StaffService::cleanPermissions($user['permissions']) : [];
         self::$user = $user;
         return $user;
     }
@@ -116,9 +124,33 @@ final class Auth
         return self::user() !== null;
     }
 
+    /** Super administrator or staff member (may open the admin panel). */
     public static function isAdmin(): bool
     {
+        return self::isPanelRole(self::user()['role'] ?? null);
+    }
+
+    public static function isPanelRole(?string $role): bool
+    {
+        return $role === 'admin' || $role === 'staff';
+    }
+
+    public static function isSuperAdmin(): bool
+    {
         return (self::user()['role'] ?? null) === 'admin';
+    }
+
+    /** May the current user work in this admin area? The super administrator may do everything. */
+    public static function can(string $permission): bool
+    {
+        $user = self::user();
+        if ($user === null) {
+            return false;
+        }
+        if ($user['role'] === 'admin') {
+            return true;
+        }
+        return $user['role'] === 'staff' && in_array($permission, $user['permission_list'], true);
     }
 
     public static function id(): ?int
@@ -137,15 +169,39 @@ final class Auth
         return $user;
     }
 
-    /** Administrators only. Guests go to login; logged-in non-admins get 403. */
-    public static function requireAdmin(): array
+    /**
+     * Admin panel pages. Guests go to login; customers get 403. With a
+     * $permission, staff members without that permission also get 403.
+     */
+    public static function requireAdmin(?string $permission = null, bool $allowPasswordChange = false): array
     {
         $user = self::requireLogin();
-        if ($user['role'] !== 'admin') {
+        if (!self::isPanelRole($user['role'])) {
             Logger::warning('Non-admin tried to open an admin page', [
                 'user_id' => $user['id'], 'url' => $_SERVER['REQUEST_URI'] ?? '', 'ip' => client_ip(),
             ]);
             abort(403, 'This area is for GiftAura administrators only.');
+        }
+        if (!$allowPasswordChange && (int) $user['must_change_password'] === 1) {
+            Flash::add('info', 'Please choose your own password before you continue.');
+            redirect('admin/password.php');
+        }
+        if ($permission !== null && !self::can($permission)) {
+            Logger::warning('Staff member opened an area without permission', [
+                'user_id' => $user['id'], 'permission' => $permission, 'url' => $_SERVER['REQUEST_URI'] ?? '',
+            ]);
+            abort(403, 'Your staff account does not have access to this area. Ask the main administrator if you need it.');
+        }
+        return $user;
+    }
+
+    /** Super administrator only (staff accounts, settings, logs). */
+    public static function requireSuperAdmin(): array
+    {
+        $user = self::requireAdmin();
+        if ($user['role'] !== 'admin') {
+            Logger::warning('Staff member opened a super-administrator page', ['user_id' => $user['id'], 'url' => $_SERVER['REQUEST_URI'] ?? '']);
+            abort(403, 'Only the main administrator can open this page.');
         }
         return $user;
     }
@@ -155,7 +211,7 @@ final class Auth
     {
         $user = self::user();
         if ($user !== null) {
-            redirect($user['role'] === 'admin' ? 'admin/' : 'account/');
+            redirect(self::isPanelRole($user['role']) ? 'admin/' : 'account/');
         }
     }
 }

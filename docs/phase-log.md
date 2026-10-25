@@ -328,6 +328,23 @@ Requested with a screenshot of a gift shop's "Reviews (2)" section: a customer w
 - **Tests run by Claude:** `review_e2e.sh` **52/52**; all other suites passed on one fresh copy (17, 58, 107, 69, 91, 36, 48); no errors logged. Screenshots at desktop and phone width checked.
 - **Pending on the laptop:** update SQL, M-43.
 
+## Staff administrators and customer inquiries (20 Oct 2026)
+
+- **Roles:** main (super) administrator = `admin`; new role `staff`. Staff log in with a username, get a generated one-time password and must change it; areas: products, categories, inquiries, orders, customers, reviews, content, reports. Staff accounts, Settings, E-mail log and Activity log stay with the main administrator.
+- **Database:** `users` gets `username`, `permissions`, `must_change_password`, `created_by` (e-mail now optional); new tables `customer_inquiries` and `inquiry_replies` (**22 tables**) — `sql/updates/2026-10-20_staff_inquiries.sql`; system check DB-02 expects 22, DB-13 checks the new columns.
+- **Admin:** Staff accounts page; Change password page; menu, dashboard cards and page guards follow the permissions; role label in the top bar; order history shows who changed a status. Inquiries list (filters, search, badge) and inquiry page (reply by e-mail, status).
+- **Shop:** Contact page message form (spam trap, 5 per hour); My account → **My inquiries**; reply e-mail `inquiry_reply`.
+- **Tests run by Claude:** `staff_e2e.sh` **96/96**; all other suites passed on one fresh copy (17, 58, 107, 69, 91, 36, 48, 52); no errors logged. Screenshots checked.
+- **Pending on the laptop:** update SQL, M-44, M-45. Chapter 5 of the report does not yet describe this feature.
+
+## In-shop sales, login before cart, profile redesign (24 Oct 2026)
+
+- **In-shop sales (FR-71):** Admin → In-shop sales (list, search, dates, status), New in-shop sale (products, quantities, discount, payment, cash received, live totals), printable invoice INV-YYMMDD-0001, cancel invoice with reason (stock returned). Stock moves through `InventoryService` (reasons `shop_sale`, `shop_sale_voided`, linked by `shop_sale_id`). New staff area "In-shop sales". Dashboard card and Reports cards. Tables `shop_sales`, `shop_sale_items` (**24 tables**) — `sql/updates/2026-10-24_shop_sales.sql`.
+- **Login before cart (FR-72):** guest Add to cart → login page "Almost there!" → after login or registration the product is in the cart.
+- **Profile (FR-73):** igp-style profile card and icon side menu on all My account pages.
+- **Tests run by Claude:** `shop_sales_e2e.sh` **75/75**; all other suites passed on one fresh copy (17, 58, 107, 69, 91, 36, 48, 52, 96); no errors logged. Screenshots at desktop and phone width and print preview checked.
+- **Pending on the laptop:** update SQL, M-46 – M-48. Chapter 5 does not yet describe FR-69 – FR-73.
+
 ## Project deliverables (from the project brief) → where they are
 
 | # | Deliverable | Location |

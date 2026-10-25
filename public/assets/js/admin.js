@@ -136,4 +136,87 @@
         toggle.addEventListener('change', sync);
         sync();
     });
+
+    // Invoice: Print button
+    document.querySelectorAll('[data-print]').forEach(function (button) {
+        button.addEventListener('click', function () { window.print(); });
+    });
+
+    // New in-shop sale: live line totals, subtotal, total and change (a preview only;
+    // the server reads the real prices and checks the stock again when saving).
+    var saleForm = document.querySelector('[data-sale-form]');
+    if (saleForm) {
+        var body = saleForm.querySelector('[data-sale-lines]');
+        var addButton = saleForm.querySelector('[data-sale-add-line]');
+        var methodSelect = saleForm.querySelector('[data-sale-method]');
+        var cashField = saleForm.querySelector('[data-sale-cash]');
+        var toCents = function (text) {
+            var clean = String(text || '').replace(/[,\s]/g, '');
+            if (!/^\d{1,7}(\.\d{1,2})?$/.test(clean)) { return null; }
+            return Math.round(parseFloat(clean) * 100);
+        };
+        var show = function (cents) {
+            var rupees = (cents / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            return 'Rs. ' + rupees;
+        };
+        var recalc = function () {
+            var subtotal = 0;
+            body.querySelectorAll('[data-sale-line]').forEach(function (row) {
+                var select = row.querySelector('[data-sale-product]');
+                var qtyInput = row.querySelector('[data-sale-qty]');
+                var out = row.querySelector('[data-sale-line-total]');
+                var option = select.options[select.selectedIndex];
+                var price = option ? toCents(option.getAttribute('data-price')) : null;
+                var stock = option ? parseInt(option.getAttribute('data-stock') || '0', 10) : 0;
+                var qty = parseInt(qtyInput.value || '0', 10);
+                if (select.value && qtyInput.value === '') { qtyInput.value = '1'; qty = 1; }
+                qtyInput.max = select.value ? String(Math.min(stock, 999)) : '999';
+                row.classList.toggle('is-over', !!select.value && qty > stock);
+                if (select.value && price !== null && qty > 0) {
+                    out.textContent = show(price * qty);
+                    subtotal += price * qty;
+                } else {
+                    out.textContent = '—';
+                }
+            });
+            var discount = toCents(saleForm.querySelector('[data-sale-discount]').value) || 0;
+            var total = Math.max(0, subtotal - discount);
+            saleForm.querySelector('[data-sale-subtotal]').textContent = show(subtotal);
+            saleForm.querySelector('[data-sale-discount-show]').textContent = discount > 0 ? '− ' + show(discount) : show(0);
+            saleForm.querySelector('[data-sale-total]').textContent = show(total);
+            var isCash = methodSelect.value === 'cash';
+            if (cashField) { cashField.hidden = !isCash; }
+            var received = isCash ? toCents(saleForm.querySelector('[data-sale-received]').value) : null;
+            var changeRow = saleForm.querySelector('[data-sale-change-row]');
+            changeRow.hidden = received === null;
+            if (received !== null) {
+                saleForm.querySelector('[data-sale-change]').textContent = received >= total ? show(received - total) : 'Not enough cash';
+            }
+        };
+        if (addButton) {
+            addButton.hidden = false;
+            addButton.addEventListener('click', function () {
+                var rows = body.querySelectorAll('[data-sale-line]');
+                if (rows.length >= 30) { return; }
+                var copy = rows[rows.length - 1].cloneNode(true);
+                var n = rows.length;
+                copy.querySelectorAll('select, input').forEach(function (field) {
+                    var base = field.id.replace(/-\d+$/, '');
+                    field.id = base + '-' + n;
+                    if (field.tagName === 'SELECT') { field.selectedIndex = 0; } else { field.value = ''; }
+                });
+                copy.querySelectorAll('label').forEach(function (label) {
+                    var target = label.getAttribute('for').replace(/-\d+$/, '');
+                    label.setAttribute('for', target + '-' + n);
+                    label.textContent = label.textContent.replace(/\d+$/, String(n + 1));
+                });
+                body.appendChild(copy);
+                copy.querySelector('select').focus();
+                recalc();
+            });
+        }
+        saleForm.addEventListener('input', recalc);
+        saleForm.addEventListener('change', recalc);
+        recalc();
+    }
 })();

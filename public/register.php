@@ -26,6 +26,7 @@ if (is_post()) {
 
     if (isset($result['id'])) {
         Auth::loginById($result['id']);
+        $waiting = CartService::takeWaiting();
         CartService::mergeSessionCart($result['id']);
         $wished = WishlistService::addPending(current_user() ?? ['id' => $result['id'], 'role' => 'customer']);
         if ($wished !== null) {
@@ -34,6 +35,10 @@ if (is_post()) {
         EmailService::sendVerification($result['id']);
         Flash::add('success', 'Your account has been created. We sent a verification link to '
             . mb_strtolower(trim((string) $input['email'])) . ' — please open it before placing an order.');
+        if ($waiting !== null) {
+            Flash::add('success', '"' . $waiting . '" has been added to your cart.');
+            redirect('cart.php');
+        }
         redirect('account/');
     }
     $errors = $result['errors'];
@@ -44,4 +49,5 @@ View::render('shop/register', [
     'title'  => 'Create an account',
     'errors' => $errors,
     'old'    => $old,
+    'waiting' => CartService::waiting(),
 ]);

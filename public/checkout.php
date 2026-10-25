@@ -9,7 +9,7 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/app/bootstrap.php';
 
 $user = Auth::requireLogin();
-if ($user['role'] === 'admin') {
+if (Auth::isPanelRole($user['role'])) {
     Flash::add('info', 'Administrator accounts cannot place orders. Please use a customer account.');
     redirect('cart.php');
 }

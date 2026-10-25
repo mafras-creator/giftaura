@@ -5,8 +5,6 @@ $formAction = $editing ? 'update' : 'create';
 <section class="section">
     <div class="container account-layout">
         <div>
-            <h1 class="page-title">My account</h1>
-            <p class="page-lead">Hello, <?= e($user['full_name']) ?>.</p>
             <?= View::partial('account-nav') ?>
         </div>
 

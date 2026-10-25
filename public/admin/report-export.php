@@ -6,7 +6,7 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/app/bootstrap.php';
 
-$admin = Auth::requireAdmin();
+$admin = Auth::requireAdmin('reports');
 
 $report = query_string('report');
 if (!array_key_exists($report, ReportService::REPORTS)) {

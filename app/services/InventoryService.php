@@ -11,7 +11,7 @@ declare(strict_types=1);
 
 final class InventoryService
 {
-    public const REASONS = ['initial_stock', 'restock', 'order_placed', 'order_cancelled', 'manual_adjustment'];
+    public const REASONS = ['initial_stock', 'restock', 'order_placed', 'order_cancelled', 'manual_adjustment', 'shop_sale', 'shop_sale_voided'];
 
     /**
      * Change stock by $change (negative = remove). Returns the new stock level.
@@ -23,7 +23,8 @@ final class InventoryService
         string $reason,
         ?int $orderId = null,
         ?int $userId = null,
-        ?string $note = null
+        ?string $note = null,
+        ?int $shopSaleId = null
     ): int {
         if ($change === 0) {
             throw new InvalidArgumentException('Stock change cannot be zero.');
@@ -48,11 +49,11 @@ final class InventoryService
         $stockAfter = (int) Database::fetchValue('SELECT stock_quantity FROM products WHERE id = :id', ['id' => $productId]);
 
         Database::execute(
-            'INSERT INTO inventory_movements (product_id, quantity_change, stock_after, reason, order_id, user_id, note)
-             VALUES (:pid, :change, :after, :reason, :oid, :uid, :note)',
+            'INSERT INTO inventory_movements (product_id, quantity_change, stock_after, reason, order_id, shop_sale_id, user_id, note)
+             VALUES (:pid, :change, :after, :reason, :oid, :sid, :uid, :note)',
             [
                 'pid' => $productId, 'change' => $change, 'after' => $stockAfter, 'reason' => $reason,
-                'oid' => $orderId, 'uid' => $userId, 'note' => $note !== null ? mb_substr($note, 0, 255) : null,
+                'oid' => $orderId, 'sid' => $shopSaleId, 'uid' => $userId, 'note' => $note !== null ? mb_substr($note, 0, 255) : null,
             ]
         );
         return $stockAfter;

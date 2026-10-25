@@ -402,6 +402,21 @@ final class CartService
         }
     }
 
+    /** Name of the product a guest added just before being asked to log in, or null (and forget it). */
+    public static function takeWaiting(): ?string
+    {
+        $name = $_SESSION['cart_waiting'] ?? null;
+        unset($_SESSION['cart_waiting']);
+        return is_string($name) ? $name : null;
+    }
+
+    /** Name of the waiting product without forgetting it (login / register pages). */
+    public static function waiting(): ?string
+    {
+        $name = $_SESSION['cart_waiting'] ?? null;
+        return is_string($name) && ($_SESSION['cart'] ?? []) !== [] ? $name : null;
+    }
+
     // -----------------------------------------------------------------
     // Internals
     // -----------------------------------------------------------------

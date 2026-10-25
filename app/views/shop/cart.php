@@ -96,7 +96,7 @@
                 <?php if ($cart['has_problems']): ?>
                     <div class="alert alert--error"><span>Please fix the items marked in red before checking out.</span></div>
                     <button type="button" class="btn btn--primary btn--block" disabled>Proceed to checkout</button>
-                <?php elseif ($user !== null && $user['role'] === 'admin'): ?>
+                <?php elseif ($user !== null && Auth::isPanelRole($user['role'])): ?>
                     <div class="alert alert--info"><span>You are logged in as an administrator. Use a customer account to place orders.</span></div>
                 <?php elseif ($user !== null && $user['email_verified_at'] === null): ?>
                     <div class="alert alert--warning"><span>Please verify your e-mail address before checking out. Open the link we sent to <?= e($user['email']) ?>.</span></div>

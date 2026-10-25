@@ -20,24 +20,29 @@ if (is_post()) {
     $old      = ['email' => $email];
 
     if ($email === '' || $password === '') {
-        $error = 'Enter your email and password.';
+        $error = 'Enter your email (or staff username) and password.';
     } else {
         $result = Auth::attempt($email, $password);
         if ($result === Auth::OK) {
             $user = current_user();
+            $waiting = CartService::takeWaiting();
             CartService::mergeSessionCart($user['id']);
             Flash::add('success', 'Welcome back, ' . $user['full_name'] . '.');
+            if ($waiting !== null && $user['role'] === 'customer') {
+                Flash::add('success', '"' . $waiting . '" has been added to your cart.');
+                $next = url('cart.php');
+            }
             $wished = WishlistService::addPending($user);
             if ($wished !== null) {
                 Flash::add('success', '"' . $wished . '" was saved to your wishlist.');
             }
-            $fallback = $user['role'] === 'admin' ? 'admin/' : 'account/';
+            $fallback = Auth::isPanelRole($user['role']) ? 'admin/' : 'account/';
             header('Location: ' . safe_next($next, $fallback), true, 303);
             exit;
         }
         $error = $result === Auth::BLOCKED
             ? 'Too many unsuccessful login attempts. Please wait 15 minutes and try again.'
-            : 'The email or password is incorrect.';
+            : 'The email/username or password is incorrect.';
     }
 }
 
@@ -46,4 +51,5 @@ View::render('shop/login', [
     'error' => $error,
     'old'   => $old,
     'next'  => $next,
+    'waiting' => CartService::waiting(),
 ]);

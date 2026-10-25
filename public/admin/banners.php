@@ -6,7 +6,7 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/app/bootstrap.php';
 
-$admin   = Auth::requireAdmin();
+$admin   = Auth::requireAdmin('content');
 $errors  = [];
 $editId  = ctype_digit(query_string('edit')) ? (int) query_string('edit') : 0;
 $editing = $editId > 0 ? BannerService::find($editId) : null;

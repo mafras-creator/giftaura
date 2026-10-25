@@ -44,12 +44,13 @@ Products marked **Personalisable** can carry your own name or message.
 
 ## 3. Add to cart
 
+You need an account to use the cart. When you press **Add to cart** without being logged in, you are asked to log in or create a free account — the product you chose (with your personalisation message) is then put in your cart automatically.
+
 - Click the yellow **Add to cart** button on a product card, or open the product, choose the quantity with **−** / **+** and click **Add to cart**.
 - The **Cart** link at the top shows how many items you have.
 - In the cart you can change a quantity (**Update**) or **Remove** an item. Prices and stock are checked again every time the cart opens; if something is no longer available, the cart tells you what to change.
 - The cart shows **Subtotal**, **Delivery** and **Total** in Sri Lankan rupees.
 
-If you added items before logging in, they are kept when you log in.
 
 ## 4. Check out
 
@@ -97,4 +98,4 @@ You are logged out automatically after 30 minutes without activity. Always **Log
 
 ## 9. Questions
 
-See the **Contact** page for the store's phone, e-mail, address and opening hours.
+Open **Contact** → *Send us a message*: choose what it is about, add your order reference if you have one, and write your message. You get a reference (INQ-0001) and our reply by e-mail. If you were logged in, your messages and our replies are also in **My account → My inquiries**. Please never send card or bank passwords. The Contact page also shows the store's phone, e-mail, address and opening hours when they are published.

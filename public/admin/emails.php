@@ -3,7 +3,7 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/app/bootstrap.php';
 
-Auth::requireAdmin();
+Auth::requireSuperAdmin();
 
 $filters = array_filter([
     'status'   => query_string('status'),

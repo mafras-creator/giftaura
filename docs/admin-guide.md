@@ -194,9 +194,35 @@ Customers automatically receive e-mails when you change an order to **Confirmed,
 
 **Activity log** lists every admin action (product changes, price changes, stock changes, order and payment updates, settings changes, exports) with the admin's name, time and computer address. Passwords and bank numbers are never recorded.
 
+## 9b. Staff accounts (main administrator only)
+
+You (the account created with `scripts/create_admin.php`) are the **main administrator** and can open everything. Give each helper their own **staff account** — never share your password.
+
+1. Admin → **Staff accounts** → *Add a staff member*: name, a **username** (e.g. `nimal.staff`, cannot be changed later), e-mail (optional).
+2. Tick the areas they may work in. Default: Products and stock, Categories, Customer inquiries. Others: Orders and payments, Customers, Reviews, Banners and About page, Reports.
+3. Press **Create account**. A green box shows the username and a **generated password**. Copy it and give it to the person privately (it is shown only once and cannot be looked up later).
+4. They log in on the normal login page with the **username** and that password, and must then choose their own password.
+
+In the list you can **Edit** (change name, e-mail and areas — takes effect on their next click), **New password** (generates another one-time password, e.g. if they forgot theirs) and **Deactivate** (logs them out at once; nothing they did is deleted). Staff never see Staff accounts, Settings, the E-mail log or the Activity log. Everything they do is recorded in the Activity log with their name, and order history shows "(staff)".
+
+## 9c. Customer inquiries
+
+Messages sent from the **Contact** page appear in Admin → **Inquiries** (the badge shows how many are new). Open one, type the reply and choose **In progress** or **Resolved** → **Send reply**. The reply is e-mailed to the customer (reference INQ-…) and, if they were logged in when they wrote, shown under My account → My inquiries. Use *Change status without replying* for messages that need no answer (e.g. spam). Never ask customers for card numbers or passwords.
+
+## 9d. In-shop sales and invoices
+
+When a customer buys in the shop: Admin → **In-shop sales** → **+ New in-shop sale** (or **Sell in the shop** on a product's page).
+
+1. Choose each product and its quantity (type the first letters in the list to jump to a product; **+ Add another line** for more). Prices come from the website.
+2. Optional: customer name and mobile, a discount in rupees, a note for the invoice.
+3. Choose how they paid. For cash, type the cash received to see the change.
+4. **Save sale and create invoice** → the stock goes down at once and the invoice opens → **Print invoice** (or save it as PDF from the print window).
+
+The invoice shows the shop name, the reference (INV-241024-0007), date and time, who served the customer, items, total and change. To show the shop address, phone and e-mail on invoices, fill them in under Settings. If a sale was entered by mistake or the customer returns the items, open the invoice → **Cancel invoice** with a reason: the stock goes back and the invoice stays in the list marked Cancelled. Shop sales appear on the Dashboard (Shop sales today) and in Reports (In-shop sales, Website + shop). Give staff the **In-shop sales** area to let them sell.
+
 ## 10. Good practice
 
 - Log out when you leave the computer (you are also logged out after 30 minutes without activity).
-- Never share the administrator password. Create a separate administrator for each staff member (see README, *Create an administrator*).
+- Never share the administrator password. Create a **staff account** for each helper (section 9b) and tick only the areas they need.
 - Take a backup every week and before big changes (`docs/deployment-and-backup.md`).
 - If something goes wrong, see `docs/troubleshooting.md`.

@@ -89,6 +89,26 @@ First look at **Admin → E-mail log**: the *Result* column shows what happened 
 | "Table product_reviews doesn't exist" (Products, home page or My reviews shows "Something went wrong") | Run `sql/updates/2026-10-18_reviews.sql` in phpMyAdmin (as root). System check DB-02 expects 20 tables |
 | "Unknown column image_file" or a page error after the update | Run `sql/updates/2026-10-17_banners.sql` in phpMyAdmin (as root) |
 
+## 6b. Staff accounts and inquiries
+
+| Symptom | Fix |
+|---|---|
+| Admin page shows a database error about `username` or `customer_inquiries` | The update `sql/updates/2026-10-20_staff_inquiries.sql` was not run. Run it in phpMyAdmin as `root`, one block at a time |
+| Staff member says "incorrect username or password" | Check the username in Staff accounts (lower-case). If unsure, press **New password** and give them the new one; check the account is Active |
+| Staff member sees "Access denied" | That area is not ticked for them: Staff accounts → Edit → tick it → Save |
+| Staff member keeps being sent to Change password | They must finish choosing a new password (at least 8 characters with a letter and a number, different from the generated one) |
+| Customer did not receive the reply | Check the E-mail log (main administrator); in test mode e-mails are only saved in `storage/mail` |
+
+## 6c. In-shop sales and invoices
+
+| Symptom | Fix |
+|---|---|
+| Admin → In-shop sales or Inventory shows a database error about `shop_sales` or `shop_sale_id` | Run `sql/updates/2026-10-24_shop_sales.sql` in phpMyAdmin as `root`, one block at a time |
+| A product is missing from the product list on New in-shop sale | It has no stock. Add stock in Inventory first |
+| "Not enough stock" when saving | Someone bought it online meanwhile; lower the quantity |
+| Invoice prints with the menu or on two pages | Use **Print invoice**; in the print window choose "Margins: Default" and turn off "Headers and footers" |
+| Shop address or phone missing on the invoice | Fill them in under Settings (main administrator) |
+
 ## 7. Reports, documents and tools
 
 | Symptom | Fix |

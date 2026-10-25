@@ -17,6 +17,8 @@ Nothing touches the real `giftaura_db` database.
 | `sale_wishlist_e2e.sh` | 36 checks: sale prices (admin, shop, cart/order), wishlist heart, login hand-over, access rules |
 | `custom_e2e.sh` | 48 checks: personalised products (admin settings, Personalise button, message box, cart edit, guest-to-login hand-over, checkout fingerprint, order snapshot, e-mail, required/optional, switching off) |
 | `review_e2e.sh` | 52 checks: reviews only after delivery, validation, escaping, public name, averages and star bars, card rating, edit/delete, other customers and admins refused, admin hide/show/delete, paging |
+| `staff_e2e.sh` | 96 checks: staff accounts (generated password, username login, forced change, permissions, 403 pages, reset, deactivate), contact form (validation, spam trap, rate limit), My inquiries, admin reply and e-mail, status |
+| `shop_sales_e2e.sh` | 75 checks: login before add to cart (product kept after login/registration), profile card, in-shop sales (access, validation, invoice, stock, ledger, reports, cancel, staff area) |
 | `email_unit.php` | 17 checks: header-injection guards and one-time link rules (in-memory database) |
 | `fake_smtp.php` | Tiny local SMTP server used by `email_e2e.sh` (accepts or rejects the login). Test only |
 | `make_fixtures.php` | Creates the image files used by the upload-security checks in `admin_e2e.sh` |
@@ -32,6 +34,8 @@ php -d opcache.enable=0 -S 127.0.0.1:8094 test_router.php &    # banner_e2e.sh
 php -d opcache.enable=0 -S 127.0.0.1:8093 test_router.php &    # sale_wishlist_e2e.sh
 php -d opcache.enable=0 -S 127.0.0.1:8092 test_router.php &    # custom_e2e.sh
 php -d opcache.enable=0 -S 127.0.0.1:8091 test_router.php &    # review_e2e.sh
+php -d opcache.enable=0 -S 127.0.0.1:8089 test_router.php &    # staff_e2e.sh
+php -d opcache.enable=0 -S 127.0.0.1:8088 test_router.php &    # shop_sales_e2e.sh
 php reset_test_db.php && bash shop_e2e.sh      # repeat reset before each suite
 php email_unit.php
 ```

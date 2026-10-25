@@ -7,7 +7,7 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/app/bootstrap.php';
 
-$admin = Auth::requireAdmin();
+$admin = Auth::requireAdmin('orders');
 $id = ctype_digit(query_string('id')) ? (int) query_string('id') : 0;
 $order = OrderAdminService::find($id);
 if ($order === null) {

@@ -7,7 +7,7 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/app/bootstrap.php';
 
-$admin   = Auth::requireAdmin();
+$admin   = Auth::requireAdmin('products');
 $id      = ctype_digit(query_string('id')) ? (int) query_string('id') : 0;
 $product = $id > 0 ? ProductAdminService::find($id) : null;
 if ($id > 0 && $product === null) {

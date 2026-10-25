@@ -79,7 +79,7 @@ $isBankUnpaid = ($payment['method'] ?? '') === 'bank_transfer' && ($payment['sta
                 <?php foreach ($history as $h): ?>
                     <li>
                         <strong><?= e(OrderService::STATUSES[$h['to_status']] ?? $h['to_status']) ?></strong>
-                        <span class="muted"><?= e(format_datetime($h['created_at'])) ?> · <?= e($h['changed_by_role'] === 'admin' ? 'Staff' : ($h['changed_by_role'] === 'customer' ? 'Customer' : 'System')) ?></span>
+                        <span class="muted"><?= e(format_datetime($h['created_at'])) ?> · <?= e(Auth::isPanelRole($h['changed_by_role']) ? ($h['changed_by_name'] ?? 'Staff') . ($h['changed_by_role'] === 'staff' ? ' (staff)' : '') : ($h['changed_by_role'] === 'customer' ? 'Customer' : 'System')) ?></span>
                         <?php if (!empty($h['note'])): ?><br><span><?= e($h['note']) ?></span><?php endif; ?>
                     </li>
                 <?php endforeach; ?>

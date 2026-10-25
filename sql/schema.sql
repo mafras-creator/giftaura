@@ -28,6 +28,8 @@
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS inquiry_replies;
+DROP TABLE IF EXISTS customer_inquiries;
 DROP TABLE IF EXISTS product_reviews;
 DROP TABLE IF EXISTS wishlist_items;
 DROP TABLE IF EXISTS banners;
@@ -35,6 +37,8 @@ DROP TABLE IF EXISTS email_log;
 DROP TABLE IF EXISTS user_tokens;
 DROP TABLE IF EXISTS admin_activity_log;
 DROP TABLE IF EXISTS inventory_movements;
+DROP TABLE IF EXISTS shop_sale_items;
+DROP TABLE IF EXISTS shop_sales;
 DROP TABLE IF EXISTS payments;
 DROP TABLE IF EXISTS order_status_history;
 DROP TABLE IF EXISTS order_items;
@@ -56,11 +60,15 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- ---------------------------------------------------------------------
 CREATE TABLE users (
     id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
-    role            ENUM('customer','admin') NOT NULL DEFAULT 'customer',
+    role            ENUM('customer','staff','admin') NOT NULL DEFAULT 'customer' COMMENT 'admin = super administrator (owner), staff = staff administrator',
     full_name       VARCHAR(100)     NOT NULL,
-    email           VARCHAR(190)     NOT NULL,
+    email           VARCHAR(190)     NULL COMMENT 'Required for customers; optional for staff (they log in with a username)',
+    username        VARCHAR(40)      NULL COMMENT 'Staff login name, created by the super administrator',
     phone           VARCHAR(20)      NULL,
     password_hash   VARCHAR(255)     NOT NULL COMMENT 'password_hash() output, never plaintext',
+    permissions     VARCHAR(255)     NULL COMMENT 'Staff only: comma-separated areas, e.g. products,categories,inquiries',
+    must_change_password TINYINT(1)  NOT NULL DEFAULT 0 COMMENT '1 = must choose a new password at next login',
+    created_by      INT UNSIGNED     NULL COMMENT 'Super administrator who created this staff account',
     email_verified_at DATETIME       NULL COMMENT 'When the e-mail link was confirmed; NULL = not verified',
     is_active       TINYINT(1)       NOT NULL DEFAULT 1,
     last_login_at   DATETIME         NULL,
@@ -68,9 +76,12 @@ CREATE TABLE users (
     updated_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_users_email (email),
+    UNIQUE KEY uq_users_username (username),
     KEY idx_users_role_active (role, is_active),
+    CONSTRAINT fk_users_created_by FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT chk_users_active CHECK (is_active IN (0,1)),
-    CONSTRAINT chk_users_name   CHECK (CHAR_LENGTH(TRIM(full_name)) > 0)
+    CONSTRAINT chk_users_name   CHECK (CHAR_LENGTH(TRIM(full_name)) > 0),
+    CONSTRAINT chk_users_login  CHECK (email IS NOT NULL OR username IS NOT NULL)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
@@ -367,9 +378,10 @@ CREATE TABLE inventory_movements (
     product_id      INT UNSIGNED     NOT NULL,
     quantity_change INT              NOT NULL COMMENT 'Negative = stock out, positive = stock in',
     stock_after     INT              NOT NULL,
-    reason          ENUM('initial_stock','restock','order_placed','order_cancelled','manual_adjustment')
+    reason          ENUM('initial_stock','restock','order_placed','order_cancelled','manual_adjustment','shop_sale','shop_sale_voided')
                                      NOT NULL,
     order_id        INT UNSIGNED     NULL,
+    shop_sale_id    INT UNSIGNED     NULL COMMENT 'In-shop sale (invoice) that caused it; FK added after table 23',
     user_id         INT UNSIGNED     NULL COMMENT 'Admin or customer whose action caused it',
     note            VARCHAR(255)     NULL,
     created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -528,3 +540,95 @@ CREATE TABLE product_reviews (
     CONSTRAINT chk_reviews_rating CHECK (rating BETWEEN 1 AND 5),
     CONSTRAINT chk_reviews_visible CHECK (is_visible IN (0,1))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 21. customer_inquiries : messages sent from the Contact page
+-- ---------------------------------------------------------------------
+CREATE TABLE customer_inquiries (
+    id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    user_id         INT UNSIGNED     NULL COMMENT 'Customer account if logged in',
+    name            VARCHAR(100)     NOT NULL,
+    email           VARCHAR(190)     NOT NULL,
+    phone           VARCHAR(20)      NULL,
+    subject         ENUM('order','product','personalisation','delivery','other') NOT NULL DEFAULT 'other',
+    order_number    VARCHAR(20)      NULL,
+    message         VARCHAR(2000)    NOT NULL,
+    status          ENUM('new','in_progress','resolved') NOT NULL DEFAULT 'new',
+    ip_address      VARCHAR(45)      NULL,
+    last_reply_at   DATETIME         NULL,
+    created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_inquiries_status (status, created_at),
+    KEY idx_inquiries_user (user_id, created_at),
+    KEY idx_inquiries_ip (ip_address, created_at),
+    CONSTRAINT fk_inquiries_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 22. inquiry_replies : answers from the store (also e-mailed)
+-- ---------------------------------------------------------------------
+CREATE TABLE inquiry_replies (
+    id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    inquiry_id      INT UNSIGNED     NOT NULL,
+    admin_id        INT UNSIGNED     NULL COMMENT 'Super administrator or staff member who replied',
+    message         VARCHAR(3000)    NOT NULL,
+    created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_inquiry_replies (inquiry_id, created_at),
+    CONSTRAINT fk_inquiry_replies_inquiry FOREIGN KEY (inquiry_id) REFERENCES customer_inquiries (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_inquiry_replies_admin FOREIGN KEY (admin_id) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 23. shop_sales : sales made in the physical shop (walk-in customers),
+--     each with a printed invoice. Stock is taken from products.
+-- ---------------------------------------------------------------------
+CREATE TABLE shop_sales (
+    id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    invoice_number  VARCHAR(20)      NOT NULL COMMENT 'e.g. INV-261024-0001',
+    customer_name   VARCHAR(100)     NULL,
+    customer_phone  VARCHAR(20)      NULL,
+    subtotal        DECIMAL(10,2)    NOT NULL,
+    discount        DECIMAL(10,2)    NOT NULL DEFAULT 0.00,
+    total           DECIMAL(10,2)    NOT NULL,
+    payment_method  ENUM('cash','card','bank_transfer') NOT NULL DEFAULT 'cash',
+    amount_received DECIMAL(10,2)    NULL COMMENT 'Cash handed over (cash only)',
+    note            VARCHAR(255)     NULL,
+    status          ENUM('completed','voided') NOT NULL DEFAULT 'completed',
+    void_reason     VARCHAR(255)     NULL,
+    voided_at       DATETIME         NULL,
+    voided_by       INT UNSIGNED     NULL,
+    created_by      INT UNSIGNED     NULL COMMENT 'Administrator or staff member who made the sale',
+    created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_shop_sales_invoice (invoice_number),
+    KEY idx_shop_sales_time (status, created_at),
+    CONSTRAINT fk_shop_sales_creator FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT fk_shop_sales_voider FOREIGN KEY (voided_by) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT chk_shop_sales_amounts CHECK (subtotal >= 0 AND discount >= 0 AND discount <= subtotal AND total = subtotal - discount)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 24. shop_sale_items : invoice lines (snapshot of name and price)
+-- ---------------------------------------------------------------------
+CREATE TABLE shop_sale_items (
+    id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    sale_id         INT UNSIGNED     NOT NULL,
+    product_id      INT UNSIGNED     NULL,
+    product_name    VARCHAR(150)     NOT NULL,
+    sku             VARCHAR(50)      NULL,
+    unit_price      DECIMAL(10,2)    NOT NULL,
+    quantity        SMALLINT UNSIGNED NOT NULL,
+    line_total      DECIMAL(10,2)    NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_shop_sale_product (sale_id, product_id),
+    CONSTRAINT fk_shop_items_sale FOREIGN KEY (sale_id) REFERENCES shop_sales (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_shop_items_product FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT chk_shop_items_qty CHECK (quantity BETWEEN 1 AND 999),
+    CONSTRAINT chk_shop_items_total CHECK (line_total = unit_price * quantity)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE inventory_movements
+    ADD KEY idx_inventory_shop_sale (shop_sale_id),
+    ADD CONSTRAINT fk_inventory_shop_sale FOREIGN KEY (shop_sale_id) REFERENCES shop_sales (id) ON DELETE SET NULL ON UPDATE CASCADE;

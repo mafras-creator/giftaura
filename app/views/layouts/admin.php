@@ -7,23 +7,28 @@ $user      = current_user();
 $storeName = setting('store_name', 'GiftAura');
 $flashes   = Flash::pull();
 
-// [file to highlight, link, label, other files that highlight the same item]
+// [file to highlight, link, label, other files that highlight the same item, area ('' = everyone, 'super' = super admin only)]
 $menu = [
-    ['admin/index.php', 'admin/', 'Dashboard', []],
-    ['admin/orders.php', 'admin/orders.php', 'Orders', ['admin/order.php']],
-    ['admin/products.php', 'admin/products.php', 'Products', ['admin/product-edit.php']],
-    ['admin/categories.php', 'admin/categories.php', 'Categories', []],
-    ['admin/banners.php', 'admin/banners.php', 'Banners', []],
-    ['admin/about.php', 'admin/about.php', 'About page', []],
-    ['admin/inventory.php', 'admin/inventory.php', 'Inventory', []],
-    ['admin/customers.php', 'admin/customers.php', 'Customers', ['admin/customer.php']],
-    ['admin/reviews.php', 'admin/reviews.php', 'Reviews', []],
-    ['admin/reports.php', 'admin/reports.php', 'Reports', []],
-    ['admin/emails.php', 'admin/emails.php', 'E-mail log', []],
-    ['admin/activity.php', 'admin/activity.php', 'Activity log', []],
-    ['admin/settings.php', 'admin/settings.php', 'Settings', []],
+    ['admin/index.php', 'admin/', 'Dashboard', [], ''],
+    ['admin/orders.php', 'admin/orders.php', 'Orders', ['admin/order.php'], 'orders'],
+    ['admin/sales.php', 'admin/sales.php', 'In-shop sales', ['admin/sale.php', 'admin/sale-new.php'], 'shop_sales'],
+    ['admin/inquiries.php', 'admin/inquiries.php', 'Inquiries', ['admin/inquiry.php'], 'inquiries'],
+    ['admin/products.php', 'admin/products.php', 'Products', ['admin/product-edit.php'], 'products'],
+    ['admin/categories.php', 'admin/categories.php', 'Categories', [], 'categories'],
+    ['admin/inventory.php', 'admin/inventory.php', 'Inventory', [], 'products'],
+    ['admin/customers.php', 'admin/customers.php', 'Customers', ['admin/customer.php'], 'customers'],
+    ['admin/reviews.php', 'admin/reviews.php', 'Reviews', [], 'reviews'],
+    ['admin/banners.php', 'admin/banners.php', 'Banners', [], 'content'],
+    ['admin/about.php', 'admin/about.php', 'About page', [], 'content'],
+    ['admin/reports.php', 'admin/reports.php', 'Reports', [], 'reports'],
+    ['admin/staff.php', 'admin/staff.php', 'Staff accounts', [], 'super'],
+    ['admin/emails.php', 'admin/emails.php', 'E-mail log', [], 'super'],
+    ['admin/activity.php', 'admin/activity.php', 'Activity log', [], 'super'],
+    ['admin/settings.php', 'admin/settings.php', 'Settings', [], 'super'],
 ];
-$pendingCount = (int) Database::fetchValue("SELECT COUNT(*) FROM orders WHERE status = 'pending'");
+$menu = array_values(array_filter($menu, static fn($m) => $m[4] === '' || ($m[4] === 'super' ? Auth::isSuperAdmin() : Auth::can($m[4]))));
+$newInquiryCount = Auth::can('inquiries') ? InquiryService::countNew() : 0;
+$pendingCount = Auth::can('orders') ? (int) Database::fetchValue("SELECT COUNT(*) FROM orders WHERE status = 'pending'") : 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -48,13 +53,16 @@ $pendingCount = (int) Database::fetchValue("SELECT COUNT(*) FROM orders WHERE st
         </a>
         <nav>
             <ul class="admin-menu">
-                <?php foreach ($menu as [$file, $path, $label, $also]): ?>
+                <?php foreach ($menu as [$file, $path, $label, $also, $area]): ?>
                     <?php $active = nav_active($file) !== '' || array_filter($also, static fn($f) => nav_active($f) !== '') !== []; ?>
                     <li>
                         <a class="admin-menu__link<?= $active ? ' is-active' : '' ?>" href="<?= e(url($path)) ?>">
                             <?= e($label) ?>
                             <?php if ($file === 'admin/orders.php' && $pendingCount > 0): ?>
                                 <span class="admin-menu__count" title="Pending orders"><?= e((string) $pendingCount) ?></span>
+                            <?php endif; ?>
+                            <?php if ($file === 'admin/inquiries.php' && $newInquiryCount > 0): ?>
+                                <span class="admin-menu__count" title="New inquiries"><?= e((string) $newInquiryCount) ?></span>
                             <?php endif; ?>
                         </a>
                     </li>
@@ -73,8 +81,9 @@ $pendingCount = (int) Database::fetchValue("SELECT COUNT(*) FROM orders WHERE st
             </button>
             <h1 class="admin-topbar__title"><?= e($title ?? 'Admin') ?></h1>
             <div class="admin-topbar__user">
-                <span class="admin-topbar__name"><?= e($user['full_name'] ?? '') ?></span>
-                <a href="<?= e(url('account/password.php')) ?>">Change password</a>
+                <span class="admin-topbar__name"><?= e($user['full_name'] ?? '') ?>
+                    <small class="admin-topbar__role"><?= ($user['role'] ?? '') === 'admin' ? 'Main administrator' : 'Staff' ?></small></span>
+                <a href="<?= e(url('admin/password.php')) ?>">Change password</a>
                 <form method="post" action="<?= e(url('logout.php')) ?>">
                     <?= csrf_field() ?>
                     <button type="submit" class="btn btn--ghost btn--small">Log out</button>

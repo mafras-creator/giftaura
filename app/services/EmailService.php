@@ -16,6 +16,7 @@ final class EmailService
         'order_placed'   => 'Order confirmation',
         'order_status'   => 'Order status update',
         'payment'        => 'Payment update',
+        'inquiry_reply'  => 'Reply to an inquiry',
         'test'           => 'Test e-mail',
     ];
 
@@ -142,6 +143,22 @@ final class EmailService
                     'message'  => $message,
                     'payment'  => PaymentService::forOrder($orderId),
                     'link'     => absolute_url('account/order.php', ['order' => $order['order_number']]),
+                ]);
+        });
+    }
+
+    /** The store's answer to a message sent from the Contact page. */
+    public static function inquiryReply(array $inquiry, string $reply): void
+    {
+        self::safely(static function () use ($inquiry, $reply): void {
+            $ref = InquiryService::reference((int) $inquiry['id']);
+            self::deliver('inquiry_reply',
+                ['id' => $inquiry['user_id'] !== null ? (int) $inquiry['user_id'] : null, 'full_name' => $inquiry['name'], 'email' => $inquiry['email']],
+                null, 'Re: your message to ' . setting('store_name', 'GiftAura') . ' (' . $ref . ')', 'emails/inquiry-reply', [
+                    'inquiry' => $inquiry,
+                    'reply'   => $reply,
+                    'ref'     => $ref,
+                    'link'    => $inquiry['user_id'] !== null ? absolute_url('account/inquiries.php') : absolute_url('contact.php'),
                 ]);
         });
     }

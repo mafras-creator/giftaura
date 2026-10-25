@@ -11,4 +11,6 @@ View::render('admin/dashboard', [
     'summary'  => DashboardService::summary(),
     'lowStock' => DashboardService::lowStockProducts(),
     'recent'   => DashboardService::recentOrders(),
+    'newInquiries' => InquiryService::countNew(),
+    'shopToday' => ShopSaleService::totals(date('Y-m-d'), date('Y-m-d')),
 ]);

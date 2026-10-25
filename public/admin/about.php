@@ -3,7 +3,7 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/app/bootstrap.php';
 
-$admin = Auth::requireAdmin();
+$admin = Auth::requireAdmin('content');
 $errors = [];
 $old = AboutService::get();
 

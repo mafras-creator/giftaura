@@ -69,7 +69,7 @@ $cartCount = CartService::count();
                     </li>
                     <li class="header-actions__wide"><a class="btn btn--yellow btn--small" href="<?= e(url('register.php')) ?>">Create account</a></li>
                 <?php else: ?>
-                    <?php if ($user['role'] === 'admin'): ?>
+                    <?php if (Auth::isPanelRole($user['role'])): ?>
                         <li class="header-actions__wide"><a class="header-action" href="<?= e(url('admin/')) ?>"><span class="header-action__label">Admin panel</span></a></li>
                     <?php endif; ?>
                     <li>
