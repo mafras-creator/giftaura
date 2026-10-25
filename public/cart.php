@@ -45,6 +45,12 @@ if (is_post()) {
                 $_SESSION['cart_return'] = $back;
                 redirect('login.php', ['next' => $back]);
             }
+            // Logged-in customer: stay on the page they were on (the message and the cart
+            // count in the header show it was added). The cart opens only when they click Cart.
+            if ($result['ok'] && $back !== '') {
+                header('Location: ' . safe_next($back, 'cart.php'), true, 303);
+                exit;
+            }
             redirect('cart.php');
 
         case 'update':

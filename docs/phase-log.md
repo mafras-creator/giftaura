@@ -340,9 +340,9 @@ Requested with a screenshot of a gift shop's "Reviews (2)" section: a customer w
 ## In-shop sales, login before cart, profile redesign (24 Oct 2026)
 
 - **In-shop sales (FR-71):** Admin → In-shop sales (list, search, dates, status), New in-shop sale (products, quantities, discount, payment, cash received, live totals), printable invoice INV-YYMMDD-0001, cancel invoice with reason (stock returned). Stock moves through `InventoryService` (reasons `shop_sale`, `shop_sale_voided`, linked by `shop_sale_id`). New staff area "In-shop sales". Dashboard card and Reports cards. Tables `shop_sales`, `shop_sale_items` (**24 tables**) — `sql/updates/2026-10-24_shop_sales.sql`.
-- **Login before cart (FR-72):** guest Add to cart → login page "Almost there!" → after login or registration the product is in the cart and the customer returns to the page they were on (changed 25 Oct at the owner's request; previously went to the cart page).
+- **Login before cart (FR-72):** guest Add to cart → login page "Almost there!" → after login or registration the product is in the cart and the customer returns to the page they were on (changed 25 Oct at the owner's request; previously went to the cart page). Logged-in customers also stay on the same page after Add to cart; the cart opens only from the Cart link.
 - **Profile (FR-73):** igp-style profile card and icon side menu on all My account pages.
-- **Tests run by Claude:** `shop_sales_e2e.sh` **76/76**; all other suites passed on one fresh copy (17, 58, 107, 69, 91, 36, 48, 52, 96); no errors logged. Screenshots at desktop and phone width and print preview checked.
+- **Tests run by Claude:** `shop_sales_e2e.sh` **79/79**; all other suites passed on one fresh copy (17, 58, 107, 69, 91, 36, 48, 52, 96); no errors logged. Screenshots at desktop and phone width and print preview checked.
 - **Pending on the laptop:** update SQL, M-46 – M-48. Chapter 5 does not yet describe FR-69 – FR-73.
 
 ## Project deliverables (from the project brief) → where they are

@@ -46,7 +46,7 @@ Products marked **Personalisable** can carry your own name or message.
 
 You need an account to use the cart. When you press **Add to cart** without being logged in, you are asked to log in or create a free account — the product you chose (with your personalisation message) is then put in your cart automatically and you come back to the page you were on, so you can keep shopping.
 
-- Click the yellow **Add to cart** button on a product card, or open the product, choose the quantity with **−** / **+** and click **Add to cart**.
+- Click the yellow **Add to cart** button on a product card, or open the product, choose the quantity with **−** / **+** and click **Add to cart**. You stay on the same page; a green message confirms it and the number next to **Cart** goes up. Click **Cart** at the top when you are ready.
 - The **Cart** link at the top shows how many items you have.
 - In the cart you can change a quantity (**Update**) or **Remove** an item. Prices and stock are checked again every time the cart opens; if something is no longer available, the cart tells you what to change.
 - The cart shows **Subtotal**, **Delivery** and **Total** in Sri Lankan rupees.

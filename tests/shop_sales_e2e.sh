@@ -34,8 +34,13 @@ CP=$(page $G 'product.php?slug=sample-red-rose-bouquet')
 check "cart has the product, qty 2; product page shows added message and badge 2" "$(q "SELECT product_id||'x'||quantity FROM cart_items")|$(echo "$CP" | grep -c '&quot;Sample Red Rose Bouquet&quot; has been added to your cart')|$(echo "$CP" | grep -o 'cart-link__count\">[0-9]*' | grep -o '[0-9]*$')" "1x2|1|2"
 check "unsafe return address ignored -> products page" "$(TOKPAGE=products.php post $G2 cart.php -d action=add -d product_id=5 -d quantity=1 -d return=https://evil.example/x | cut -d' ' -f2)" "$B/login.php?next=%2Fgiftaura%2Fproducts.php"
 check "waiting product forgotten after login" "$(page $G 'login.php' >/dev/null; curl -s -b $G -o /dev/null -w '%{http_code}' $B/login.php)" "303"
-R=$(TOKPAGE='product.php?slug=sample-teddy-bear' post $G cart.php -d action=add -d product_id=9 -d quantity=1)
-check "logged-in customer: Add to cart -> cart, not login" "$R" "303 $B/cart.php"
+R=$(TOKPAGE='product.php?slug=sample-teddy-bear' post $G cart.php -d action=add -d product_id=9 -d quantity=1 -d return=/giftaura/product.php?slug=sample-teddy-bear)
+check "logged-in customer: Add to cart -> stays on the product page (not cart, not login)" "$R" "303 $B/product.php?slug=sample-teddy-bear"
+TP=$(page $G 'product.php?slug=sample-teddy-bear')
+check "product page: added message and cart count 3" "$(echo "$TP" | grep -c 'Sample Teddy Bear was added to your cart')|$(echo "$TP" | grep -o 'cart-link__count\">[0-9]*' | grep -o '[0-9]*$')" "1|3"
+check "logged-in add from the shop list stays on the list" "$(TOKPAGE=products.php post $G cart.php -d action=add -d product_id=10 -d quantity=1 -d return=/giftaura/products.php?q=candle)" "303 $B/products.php?q=candle"
+check "unsafe return address -> cart page" "$(TOKPAGE=products.php post $G cart.php -d action=add -d product_id=10 -d quantity=1 -d return=https://evil.example/ | cut -d' ' -f2)" "$B/cart.php"
+sql "DELETE FROM cart_items WHERE product_id=10"
 check "second product saved directly" "$(q "SELECT COUNT(*) FROM cart_items")" "2"
 # new customer: personalised product, then Create account
 sql "UPDATE products SET is_customizable=1, custom_label='Name on the card', custom_max_length=30, custom_required=1 WHERE id=8"
