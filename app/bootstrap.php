@@ -1,14 +1,5 @@
 <?php
-/**
- * GiftAura - application bootstrap.
- *
- * Every page in public/ starts with:
- *     require dirname(__DIR__) . '/app/bootstrap.php';        (public/*.php)
- *     require dirname(__DIR__, 2) . '/app/bootstrap.php';     (public/account/*.php, public/admin/*.php)
- *
- * It loads the configuration, registers the class autoloader, installs
- * safe error handling, sends security headers and starts the session.
- */
+
 declare(strict_types=1);
 
 define('APP_ROOT', dirname(__DIR__));
